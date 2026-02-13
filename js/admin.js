@@ -39,6 +39,7 @@ window.logout = logout;
 window.firebaseService.auth.onAuthStateChanged((user) => {
     const authScreen = document.getElementById('auth-screen');
     const dashboard = document.getElementById('dashboard');
+    document.body.style.opacity = '1';
 
     if (user) {
         if (authScreen) authScreen.style.display = 'none';

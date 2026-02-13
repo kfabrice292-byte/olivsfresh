@@ -273,7 +273,16 @@ window.addToCart = function (id) {
     }
 
     window.saveCart();
+
+    // UI Feedback
     window.showToast(`${product.name} ajouté au panier !`);
+
+    // Cart icon bump animation
+    const cartBtn = document.getElementById('cart-btn');
+    if (cartBtn) {
+        cartBtn.classList.add('cart-bump');
+        setTimeout(() => cartBtn.classList.remove('cart-bump'), 300);
+    }
 };
 
 window.updateQty = function (id, change) {
@@ -301,9 +310,6 @@ window.updateCartUI = function () {
     const totalQty = window.cart.reduce((acc, i) => acc + i.qty, 0);
     if (countEl) {
         countEl.textContent = totalQty;
-        // Animation pop on change
-        countEl.style.transform = 'scale(1.2)';
-        setTimeout(() => countEl.style.transform = 'scale(1)', 200);
     }
 
     // Update Total
@@ -315,32 +321,35 @@ window.updateCartUI = function () {
         if (window.cart.length === 0) {
             container.innerHTML = `
                 <div style="text-align:center; padding:3rem 1rem; color:#888;">
-                    <i class="ri-shopping-basket-2-line" style="font-size:3rem; margin-bottom:1rem; display:block; opacity:0.3;"></i>
-                    <p>Votre panier est vide.</p>
-                    <button onclick="document.querySelector('.close-modal').click();" class="btn-secondary" style="margin-top:1rem; font-size:0.9rem;">Retourner à la boutique</button>
+                    <div class="empty-cart-icon">
+                        <i class="ri-shopping-basket-2-line"></i>
+                    </div>
+                    <p style="margin-top:1rem; font-weight:500;">Votre panier est encore vide</p>
+                    <p style="font-size:0.85rem; opacity:0.7;">Découvrez nos produits frais du jour !</p>
+                    <button onclick="window.closeCartModal();" class="btn-primary" style="margin-top:2rem; font-size:0.9rem; padding:10px 25px; border-radius:50px;">Commencer mes courses</button>
                 </div>`;
         } else {
             container.innerHTML = window.cart.map(item => `
-                <div class="cart-item">
-                    <div style="flex:1;">
-                        <h4 style="margin:0; font-size:1rem;">${item.name}</h4>
-                        <div style="color:#666; font-size:0.85rem; margin-top:4px;">
-                            ${window.formatPrice(item.price)} x ${item.qty} = 
-                            <strong style="color:var(--primary-color);">${window.formatPrice(item.price * item.qty)}</strong>
+                <div class="cart-item-premium">
+                    <div class="cart-item-img">
+                        <img src="${item.image || 'img/oli_logo.png'}" alt="${item.name}">
+                    </div>
+                    <div class="cart-item-details">
+                        <h4 class="cart-item-name">${item.name}</h4>
+                        <div class="cart-item-price-info">
+                            <span class="unit-price">${window.formatPrice(item.price)}</span>
                         </div>
                     </div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <button onclick="window.updateQty('${item.id}', -1)" style="width:28px; height:28px; border-radius:50%; border:1px solid #eee; background:white; color:#555; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;">
-                            <i class="ri-subtract-line"></i>
-                        </button>
-                        <span style="font-weight:600; min-width:20px; text-align:center;">${item.qty}</span>
-                        <button onclick="window.updateQty('${item.id}', 1)" style="width:28px; height:28px; border-radius:50%; border:1px solid #eee; background:white; color:var(--primary-color); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;">
-                            <i class="ri-add-line"></i>
+                    <div class="cart-item-actions">
+                        <div class="qty-control">
+                            <button onclick="window.updateQty('${item.id}', -1)"><i class="ri-subtract-line"></i></button>
+                            <span>${item.qty}</span>
+                            <button onclick="window.updateQty('${item.id}', 1)"><i class="ri-add-line"></i></button>
+                        </div>
+                        <button class="remove-btn" onclick="window.removeFromCart('${item.id}')" title="Supprimer">
+                            <i class="ri-delete-bin-line"></i>
                         </button>
                     </div>
-                    <button onclick="window.removeFromCart('${item.id}')" style="margin-left:10px; border:none; background:none; color:#ff5252; cursor:pointer; font-size:1.1rem;">
-                        <i class="ri-delete-bin-line"></i>
-                    </button>
                 </div>
             `).join('');
         }
@@ -348,9 +357,23 @@ window.updateCartUI = function () {
 };
 
 // --- RENDERING ---
+window.showProductsSkeleton = function (container, count = 4) {
+    if (!container) return;
+    container.innerHTML = Array(count).fill(0).map(() => `
+        <div class="product-card skeleton">
+            <div class="product-image skeleton-box"></div>
+            <div class="product-info">
+                <div class="skeleton-line" style="width:30%;"></div>
+                <div class="skeleton-line" style="width:70%; height:1.2rem; margin:10px 0;"></div>
+                <div class="skeleton-line" style="width:50%;"></div>
+                <div class="skeleton-line" style="width:100%; height:40px; margin-top:15px; border-radius:12px;"></div>
+            </div>
+        </div>
+    `).join('');
+};
+
 window.renderProducts = function (container, category, limit = null, searchTerm = '') {
     if (!container) return;
-    container.innerHTML = '';
 
     let list = category === 'all'
         ? window.products
@@ -379,6 +402,7 @@ window.renderProducts = function (container, category, limit = null, searchTerm 
         return;
     }
 
+    container.innerHTML = ''; // Clear after check
     list.forEach((p, idx) => {
         const div = document.createElement('div');
         div.className = 'product-card';
@@ -535,42 +559,49 @@ window.renderBlogPost = function () {
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
-    // 0. Sync with Firebase
-    await window.initializeData();
-
-    // 1. Initial Render
+    // 1. Identify Elements
     const prodCont = document.getElementById('products-container');
-    const featCont = document.getElementById('featured-products-container');
+    const featuredCont = document.getElementById('featured-products-container');
+    const antigraspiCont = document.getElementById('antigaspi-container');
     const blogCont = document.querySelector('.blog-grid');
     const filters = document.querySelectorAll('.filter-btn');
 
-    // Only render if container exists
-    if (prodCont) window.renderProducts(prodCont, 'all');
-    if (featCont) {
-        // Anti-Gaspi Corner
-        const antiGaspiCont = document.getElementById('antigaspi-container');
-        if (antiGaspiCont) window.renderAntiGaspi(antiGaspiCont);
+    // 2. Show Skeletons UI while loading
+    if (prodCont) window.showProductsSkeleton(prodCont, 8);
+    if (featuredCont) window.showProductsSkeleton(featuredCont, 4);
 
-        // Dynamic selection for homepage: prefer items with tags,² or just the first few
-        let featured = window.products.filter(p => p.tag && p.active !== false && p.tag.toUpperCase() !== 'ANTI-GASPI').slice(0, 4);
-        if (featured.length < 4) {
-            const remaining = window.products.filter(p => !featured.includes(p) && p.active !== false).slice(0, 4 - featured.length);
-            featured = [...featured, ...remaining];
+    // 3. Sync with Firebase
+    await window.initializeData();
+
+    // 4. Final Render with smooth transition
+    setTimeout(() => {
+        // Shop Page
+        if (prodCont) window.renderProducts(prodCont, 'all');
+
+        // Home Page
+        if (featuredCont) {
+            const featuredList = window.products.filter(p => !p.tag || p.tag.toUpperCase() !== 'ANTI-GASPI').slice(0, 4);
+            const originalProducts = window.products;
+            window.products = featuredList;
+            window.renderProducts(featuredCont, 'all');
+            window.products = originalProducts;
         }
 
-        const originalProducts = window.products;
-        window.products = featured;
-        window.renderProducts(featCont, 'all');
-        window.products = originalProducts;
-    }
-    if (blogCont) window.renderBlog(blogCont, featCont ? 3 : null);
+        if (antigraspiCont && typeof window.renderAntiGaspi === 'function') {
+            window.renderAntiGaspi(antigraspiCont);
+        }
 
-    // Check for blog detail page
-    if (document.getElementById('blog-post-content')) {
-        window.renderBlogPost();
-    }
+        if (blogCont && typeof window.renderBlog === 'function') {
+            window.renderBlog(blogCont, featuredCont ? 3 : null);
+        }
 
-    // 2. Filter Listeners
+        // Blog detail page
+        if (document.getElementById('blog-post-content')) {
+            window.renderBlogPost();
+        }
+    }, 400);
+
+    // 5. Setup Listeners
     filters.forEach(btn => {
         btn.onclick = () => {
             filters.forEach(b => b.classList.remove('active'));
@@ -580,31 +611,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     });
 
-    // 3. Cart Modal Logic
+    // 6. Modal Logic
     const cartBtn = document.getElementById('cart-btn');
     const cartModal = document.getElementById('cart-modal');
     const closeBtn = document.querySelector('.close-modal');
 
-    // Make sure we can open/close
-    const toggleModal = (show) => {
-        if (!cartModal) return;
-        if (show) {
-            cartModal.classList.add('active');
-            window.updateCartUI();
-        } else {
-            cartModal.classList.remove('active');
-        }
+    window.closeCartModal = () => {
+        if (cartModal) cartModal.classList.remove('active');
+        document.body.style.overflow = 'visible';
     };
 
-    if (cartBtn) cartBtn.addEventListener('click', () => toggleModal(true));
-    if (closeBtn) closeBtn.addEventListener('click', () => toggleModal(false));
+    if (cartBtn && cartModal) {
+        cartBtn.onclick = () => {
+            cartModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            window.updateCartUI();
+        };
+    }
+    if (closeBtn) closeBtn.onclick = window.closeCartModal;
+    window.onclick = (e) => { if (e.target === cartModal) window.closeCartModal(); };
 
-    // Close on click outside
-    window.addEventListener('click', (e) => {
-        if (cartModal && e.target === cartModal) toggleModal(false);
-    });
-
-    // 4. WhatsApp Checkout
+    // 7. WhatsApp Checkout
     const checkBtn = document.getElementById('checkout-btn');
     if (checkBtn) {
         checkBtn.onclick = () => {
@@ -615,24 +642,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             let msg = "*👋 Bonjour, je souhaite passer commande chez Oliv's Fresh :*\n\n";
             let total = 0;
-
             window.cart.forEach(i => {
                 const lineTotal = i.price * i.qty;
                 msg += `▪️ ${i.name} (x${i.qty}) : ${window.formatPrice(lineTotal)}\n`;
                 total += lineTotal;
             });
-
             msg += `\n*💰 TOTAL : ${window.formatPrice(total)}*`;
             msg += `\n\n📍 _Merci de me confirmer la livraison._`;
 
-            const phone = "22677973958"; // The number from the HTML
+            const phone = "22677973958";
             const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-
             window.open(url, '_blank');
         };
     }
 
-    // 5. Mobile Menu
+    // 8. Mobile Menu
     const menuBtn = document.querySelector('.mobile-menu-btn');
     const nav = document.querySelector('.nav-links');
     if (menuBtn && nav) {
@@ -640,123 +664,60 @@ document.addEventListener('DOMContentLoaded', async () => {
             nav.classList.toggle('active');
             const icon = menuBtn.querySelector('i');
             if (icon) {
-                if (nav.classList.contains('active')) {
-                    icon.classList.remove('ri-menu-4-line');
-                    icon.classList.add('ri-close-line');
-                } else {
-                    icon.classList.remove('ri-close-line');
-                    icon.classList.add('ri-menu-4-line');
-                }
+                icon.className = nav.classList.contains('active') ? 'ri-close-line' : 'ri-menu-4-line';
             }
         };
-        // Close menu when clicking a link
         nav.querySelectorAll('a').forEach(link => {
             link.addEventListener('click', () => {
                 nav.classList.remove('active');
                 const icon = menuBtn.querySelector('i');
-                if (icon) {
-                    icon.classList.remove('ri-close-line');
-                    icon.classList.add('ri-menu-4-line');
-                }
+                if (icon) icon.className = 'ri-menu-4-line';
             });
         });
     }
 
-    // 7. Navigation Active State
+    // 9. Navigation Active State
     const currentPath = window.location.pathname.split('/').pop() || 'index.html';
-    const navLinks = document.querySelectorAll('.nav-links a');
-    navLinks.forEach(link => {
+    document.querySelectorAll('.nav-links a').forEach(link => {
         const href = link.getAttribute('href');
         if (href === currentPath || (currentPath === 'index.html' && href === '#accueil')) {
             link.classList.add('active');
         }
     });
 
-    // 8. Search Functionality
+    // 10. Search
     const searchInput = document.getElementById('product-search');
     if (searchInput && prodCont) {
-        searchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value;
-            const activeFilter = document.querySelector('.filter-btn.active');
-            const category = activeFilter ? activeFilter.dataset.filter : 'all';
-            window.renderProducts(prodCont, category, null, searchTerm);
-        });
+        searchInput.oninput = (e) => window.renderProducts(prodCont, 'all', null, e.target.value);
     }
 
-    // 9. Contact Form Logic
-    const contactForm = document.getElementById('contact-form-element');
-    if (contactForm) {
-        contactForm.onsubmit = (e) => {
-            e.preventDefault();
-            const name = document.getElementById('contact-name').value;
-            const info = document.getElementById('contact-info').value;
-            const message = document.getElementById('contact-message').value;
-
-            const email = "oliviagouba@gmail.com";
-            const subject = encodeURIComponent("Contact depuis le site Oliv's Fresh");
-            const body = encodeURIComponent(`Bonjour,\n\nVous avez reçu un nouveau message de contact :\n\n👤 Nom : ${name}\n📧 Contact : ${info}\n💬 Message : ${message}\n\nCordialement.`);
-
-            const mailtoUrl = `mailto:${email}?subject=${subject}&body=${body}`;
-
-            window.showToast("Ouverture de votre messagerie...");
-
-            // On ouvre le client mail
-            window.location.href = mailtoUrl;
-
-            contactForm.reset();
-        };
-    }
-
-    // 10. Initialize
-    window.updateCartUI();
-
-    // 11. Reading Progress & Navbar Effects
+    // 11. Scroll Effects
     window.addEventListener('scroll', () => {
         const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
-        const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-        const scrolled = (winScroll / height) * 100;
-        const progressBar = document.querySelector(".reading-progress");
-        if (progressBar) progressBar.style.width = scrolled + "%";
-
-        // Navbar scroll effect
-        const nav = document.querySelector('.navbar');
-        if (nav) {
+        const navBar = document.querySelector('.navbar');
+        if (navBar) {
             if (winScroll > 50) {
-                nav.style.padding = '0.5rem 0';
-                nav.style.boxShadow = '0 10px 30px rgba(0,0,0,0.1)';
-                nav.style.background = 'rgba(255, 255, 255, 0.95)';
+                navBar.style.padding = '0.5rem 0';
+                navBar.style.boxShadow = 'var(--shadow-md)';
+                navBar.style.background = 'rgba(255, 255, 255, 0.98)';
             } else {
-                nav.style.padding = '1rem 0';
-                nav.style.boxShadow = 'none';
-                nav.style.background = 'var(--glass-bg)';
+                navBar.style.padding = '1rem 0';
+                navBar.style.boxShadow = 'none';
+                navBar.style.background = 'var(--glass-bg)';
             }
         }
     });
 
-    // 12. Robust Loader Removal
+    // 12. Loader
     const removeLoader = () => {
-        const loader = document.getElementById('loader');
-        if (loader) {
-            loader.style.transition = 'opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
-            loader.style.opacity = '0';
-            setTimeout(() => {
-                if (loader.parentNode) loader.remove();
-                document.body.style.overflow = 'visible';
-                if (typeof AOS !== 'undefined') AOS.refresh();
-            }, 800);
+        const l = document.getElementById('loader');
+        if (l) {
+            l.style.opacity = '0';
+            setTimeout(() => { if (l.parentNode) l.remove(); document.body.style.overflow = 'visible'; }, 800);
         }
     };
+    setTimeout(removeLoader, 1000);
 
-    // Fallbacks
-    setTimeout(removeLoader, 2000);
-    setTimeout(removeLoader, 500);
-
-    // Init AOS
-    if (typeof AOS !== 'undefined') {
-        AOS.init({
-            duration: 800,
-            once: true,
-            offset: 50
-        });
-    }
+    // 13. AOS
+    if (typeof AOS !== 'undefined') AOS.init({ duration: 800, once: true });
 });

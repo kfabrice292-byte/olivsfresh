@@ -321,7 +321,19 @@
     </style>
 </head>
 
-<body>
+<body style="opacity: 0; transition: opacity 0.5s;">
+    <!-- Security Guard: Hide content until auth is checked -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Short timeout to let Firebase init
+            setTimeout(() => {
+                const user = localStorage.getItem('firebase:authUser:olivsfresh:[DEFAULT]');
+                if (!user && !window.location.hash.includes('login')) {
+                    // We let the onAuthStateChanged handle the real logic, but this hides UI
+                }
+            }, 500);
+        });
+    </script>
 
     <!-- Auth Screen -->
     <div id="auth-screen">
