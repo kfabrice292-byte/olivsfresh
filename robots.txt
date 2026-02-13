@@ -3,4 +3,4 @@ Allow: /
 Disallow: /private-admin-olivs-2026.html
 Disallow: /js/admin.js
 
-Sitemap: https://kfabrice292-byte.github.io/olivsfresh/sitemap.xml
+Sitemap: https://olivsfresh.com/sitemap.xml
