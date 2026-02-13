@@ -1,5 +1,8 @@
 // --- HELPERS ---
-window.formatPrice = (p) => new Intl.NumberFormat('fr-FR').format(p) + ' FCFA';
+window.formatPrice = (p) => {
+    if (p === undefined || p === null || isNaN(p)) return "0 FCFA";
+    return p.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " FCFA";
+};
 
 window.getProductTag = (cat) => {
     const tags = {
@@ -8,7 +11,8 @@ window.getProductTag = (cat) => {
         'aromatic': 'Herbes & Épices',
         'tuber': 'Tubercules',
         'processed': 'Transformés',
-        'subscription': 'Paniers'
+        'box': 'Paniers',
+        'subscription': 'Abonnements'
     };
     return tags[cat] || cat;
 };
@@ -218,23 +222,7 @@ window.initializeData = async function () {
 };
 
 // --- UTILITIES ---
-window.getProductTag = function (cat) {
-    const tags = {
-        'fruit': 'Fruits',
-        'vegetable': 'Légumes',
-        'aromatic': 'Épices & Feuilles',
-        'tuber': 'Tubercules',
-        'processed': 'Transformés',
-        'box': 'Paniers',
-        'subscription': 'Abonnements'
-    };
-    return tags[cat] || cat || '';
-};
-
-window.formatPrice = function (price) {
-    if (price === undefined || price === null || isNaN(price)) return "0 FCFA";
-    return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " FCFA";
-};
+// Helpers are now at the top of the file to prevent duplication
 
 window.showToast = function (msg) {
     const existing = document.querySelector('.toast-msg');
