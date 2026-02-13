@@ -215,6 +215,15 @@ body {
     background-color: var(--bg-light);
     line-height: 1.6;
     overflow-x: hidden;
+    width: 100%;
+    position: relative;
+}
+
+/* Prevent horizontal scroll on all devices */
+html,
+body {
+    max-width: 100%;
+    overflow-x: hidden !important;
 }
 
 h1,
@@ -389,12 +398,12 @@ img {
 .hero {
     position: relative;
     height: 100vh;
+    height: calc(var(--vh, 1vh) * 100);
     min-height: 600px;
     display: flex;
     align-items: center;
     background: url('../img/hero-bg.jpg') no-repeat center center/cover;
     background-color: #e8f5e9;
-    /* Fallback */
     overflow: hidden;
 }
 
@@ -700,12 +709,20 @@ img {
 .brand-pattern {
     position: absolute;
     top: 50%;
-    right: -10%;
+    right: -5%;
     transform: translateY(-50%) rotate(-15deg);
-    width: 400px;
+    width: 350px;
     opacity: 0.05;
     pointer-events: none;
     z-index: 0;
+}
+
+@media (max-width: 768px) {
+    .brand-pattern {
+        width: 200px;
+        right: -10%;
+        opacity: 0.03;
+    }
 }
 
 .features-section .container {
@@ -1113,8 +1130,12 @@ footer {
 
     .hero {
         height: auto;
-        padding: 120px 0 80px;
-        min-height: 80vh;
+        padding: 140px 0 60px;
+        min-height: 100vh;
+        min-height: -webkit-fill-available;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
 
     .hero-content {
@@ -1608,6 +1629,13 @@ footer {
 
 .relay-card h4 {
     margin-bottom: 0.2rem;
+    color: var(--primary-dark);
+}
+
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
 }
 
 .relay-card p {

@@ -780,4 +780,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 13. AOS
     if (typeof AOS !== 'undefined') AOS.init({ duration: 800, once: true });
+
+    // 14. Mobile VH Fix (Anti-jump)
+    const setVh = () => {
+        let vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    setVh();
+    window.addEventListener('resize', setVh);
 });
