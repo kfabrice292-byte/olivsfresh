@@ -179,6 +179,26 @@
     margin: 0 auto;
 }
 
+.cart-flyer {
+    position: fixed;
+    width: 40px;
+    height: 40px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    pointer-events: none;
+    transition: all 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+    box-shadow: var(--shadow-md);
+}
+
+.cart-flyer i {
+    font-size: 1.2rem;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -468,12 +488,12 @@ img {
 
 /* Color Themes for the icons/text */
 .theme-fruit #cycle-icon {
-    color: #e63946;
-    filter: drop-shadow(0 0 15px rgba(230, 57, 70, 0.4));
+    color: #fb8500;
+    filter: drop-shadow(0 0 15px rgba(251, 133, 0, 0.5));
 }
 
 .theme-fruit #cycle-label {
-    color: #e63946;
+    color: #fb8500;
 }
 
 .theme-veggie #cycle-icon {

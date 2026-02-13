@@ -261,7 +261,7 @@ window.saveCart = function () {
     window.updateCartUI();
 };
 
-window.addToCart = function (id) {
+window.addToCart = function (id, event) {
     const product = window.products.find(p => p.id === id);
     if (!product) return;
 
@@ -274,15 +274,38 @@ window.addToCart = function (id) {
 
     window.saveCart();
 
-    // UI Feedback
-    window.showToast(`${product.name} ajouté au panier !`);
+    // FLY ANIMATION
+    if (event) {
+        const btn = event.currentTarget;
+        const cartBtn = document.getElementById('cart-btn');
+        if (btn && cartBtn) {
+            const btnRect = btn.getBoundingClientRect();
+            const cartRect = cartBtn.getBoundingClientRect();
 
-    // Cart icon bump animation
-    const cartBtn = document.getElementById('cart-btn');
-    if (cartBtn) {
-        cartBtn.classList.add('cart-bump');
-        setTimeout(() => cartBtn.classList.remove('cart-bump'), 300);
+            const flyer = document.createElement('div');
+            flyer.className = 'cart-flyer';
+            flyer.style.left = `${btnRect.left + btnRect.width / 2}px`;
+            flyer.style.top = `${btnRect.top + btnRect.height / 2}px`;
+            flyer.innerHTML = `<i class="ri-shopping-basket-fill"></i>`;
+            document.body.appendChild(flyer);
+
+            // Trigger animation
+            requestAnimationFrame(() => {
+                flyer.style.left = `${cartRect.left + cartRect.width / 2}px`;
+                flyer.style.top = `${cartRect.top + cartRect.height / 2}px`;
+                flyer.style.transform = 'translate(-50%, -50%) scale(0.2) rotate(360deg)';
+                flyer.style.opacity = '0';
+            });
+
+            setTimeout(() => {
+                flyer.remove();
+                cartBtn.classList.add('cart-bump');
+                setTimeout(() => cartBtn.classList.remove('cart-bump'), 300);
+            }, 800);
+        }
     }
+
+    window.showToast(`${product.name} ajouté !`);
 };
 
 window.updateQty = function (id, change) {
@@ -438,7 +461,7 @@ window.renderProducts = function (container, category, limit = null, searchTerm 
                         <small style="font-weight:400; color:#888; font-size:0.8rem;">/ ${p.unit}</small>
                     </div>
                 </div>
-                <button class="btn-primary" onclick="window.addToCart('${p.id}')" style="width:100%; margin-top:1rem; border-radius:12px; display:flex; justify-content:center; align-items:center; gap:8px;">
+                <button class="btn-primary" onclick="window.addToCart('${p.id}', event)" style="width:100%; margin-top:1rem; border-radius:12px; display:flex; justify-content:center; align-items:center; gap:8px;">
                     <i class="ri-shopping-cart-2-line"></i> Ajouter
                 </button>
             </div>
@@ -449,10 +472,9 @@ window.renderProducts = function (container, category, limit = null, searchTerm 
 
 window.renderAntiGaspi = function (container) {
     if (!container) return;
-    const antiGaspiList = window.products.filter(p => p.tag && p.tag.toUpperCase() === 'ANTI-GASPI' && p.active !== false);
+    const antiGaspiList = window.products.filter(p => (p.tag && p.tag.toUpperCase() === 'ANTI-GASPI') && p.active !== false);
 
     if (antiGaspiList.length === 0) {
-        container.style.display = 'none'; // Hide section if no products
         const section = container.closest('.section');
         if (section) section.style.display = 'none';
         return;
@@ -466,7 +488,7 @@ window.renderAntiGaspi = function (container) {
         div.setAttribute('data-aos-delay', idx * 100);
 
         const imgUrl = p.image || 'img/oli_logo.png';
-        const oldPriceHtml = p.oldPrice ? `<span style="text-decoration:line-through; color:#999; font-size:0.8rem; margin-right:5px;">${window.formatPrice(p.oldPrice)}</span>` : '';
+        const oldPriceHtml = p.oldPrice ? `<span style="text-decoration:line-through; font-size:0.9rem; color:#999; margin-right:8px;">${window.formatPrice(p.oldPrice)}</span>` : '';
 
         div.innerHTML = `
             <span class="product-badge" style="position:absolute; top:12px; left:12px; background:#ff6b6b; color:white; padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:700; z-index:10; box-shadow:0 2px 8px rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.3); display:flex; align-items:center;">
@@ -487,7 +509,7 @@ window.renderAntiGaspi = function (container) {
                         <span>${window.formatPrice(p.price)}</span>
                     </div>
                 </div>
-                <button class="btn-primary" onclick="window.addToCart('${p.id}')" style="width:100%; margin-top:1rem; border-radius:12px; background:#ff6b6b; border-color:#ff6b6b;">
+                <button class="btn-primary" onclick="window.addToCart('${p.id}', event)" style="width:100%; margin-top:1rem; border-radius:12px; background:#ff6b6b; border-color:#ff6b6b;">
                     Je sauve ce produit !
                 </button>
             </div>
@@ -565,7 +587,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const h1 = document.querySelector('.hero-title-premium');
 
     const items = [
-        { text: 'Fruits', icon: 'ri-apple-fill', theme: 'theme-fruit' },
+        { text: 'Fruits', icon: 'ri-leaf-line', theme: 'theme-fruit' },
         { text: 'Légumes', icon: 'ri-leaf-fill', theme: 'theme-veggie' },
         { text: 'Paniers', icon: 'ri-shopping-basket-fill', theme: 'theme-box' }
     ];
@@ -576,13 +598,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         cycleLabel.classList.add('reveal-up');
 
         setInterval(async () => {
-            // PHASE 1: Exit
             cycleLabel.classList.remove('reveal-up');
             cycleLabel.classList.add('exit-up');
 
             await new Promise(r => setTimeout(r, 500));
 
-            // PHASE 2: Swap
             h1.classList.remove(items[idx].theme);
             idx = (idx + 1) % items.length;
             h1.classList.add(items[idx].theme);
@@ -590,9 +610,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             cycleLabel.textContent = items[idx].text;
             cycleIcon.innerHTML = `<i class="${items[idx].icon}"></i>`;
 
-            // PHASE 3: Reveal
             cycleLabel.classList.remove('exit-up');
-            void cycleLabel.offsetWidth; // force reflow
+            void cycleLabel.offsetWidth;
             cycleLabel.classList.add('reveal-up');
         }, 3500);
     }
@@ -682,10 +701,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             let total = 0;
             window.cart.forEach(i => {
                 const lineTotal = i.price * i.qty;
-                msg += `▪️ ${i.name} (x${i.qty}) : ${window.formatPrice(lineTotal)}\n`;
+                msg += `▪️ ${i.name} (x${i.qty}) : ${window.formatPrice(lineTotal)} \n`;
                 total += lineTotal;
             });
-            msg += `\n*💰 TOTAL : ${window.formatPrice(total)}*`;
+            msg += `\n *💰 TOTAL: ${window.formatPrice(total)}* `;
             msg += `\n\n📍 _Merci de me confirmer la livraison._`;
 
             const phone = "22677973958";
