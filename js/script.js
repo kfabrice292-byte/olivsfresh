@@ -176,7 +176,7 @@ window.initializeData = async function () {
             // Filter out invalid/corrupt products (missing name)
             const validFbProducts = fbProducts.filter(p => {
                 if (!p || !p.name || typeof p.name !== 'string') {
-                    console.warn("Skipping invalid Firebase product:", p);
+                    console.warn("⚠️ Produit Firebase invalide détecté (champ 'name' manquant ou incorrect). ID:", p?.id, "Contenu:", p);
                     return false;
                 }
                 return true;
