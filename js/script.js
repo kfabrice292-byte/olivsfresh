@@ -559,25 +559,42 @@ window.renderBlogPost = function () {
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
-    // 0. Hero Title Animation (Firebase style)
+    // 0. Hero Title Animation (Premium Phase-Based Reveal)
     const cycleLabel = document.getElementById('cycle-label');
     const cycleIcon = document.getElementById('cycle-icon');
+    const h1 = document.querySelector('.hero-title-premium');
+
     const items = [
-        { text: 'Fruits', icon: 'ri-apple-fill' },
-        { text: 'Légumes', icon: 'ri-leaf-fill' },
-        { text: 'Paniers', icon: 'ri-shopping-basket-fill' }
+        { text: 'Fruits', icon: 'ri-apple-fill', theme: 'theme-fruit' },
+        { text: 'Légumes', icon: 'ri-leaf-fill', theme: 'theme-veggie' },
+        { text: 'Paniers', icon: 'ri-shopping-basket-fill', theme: 'theme-box' }
     ];
 
-    if (cycleLabel && cycleIcon) {
+    if (cycleLabel && cycleIcon && h1) {
         let idx = 0;
-        setInterval(() => {
+        h1.classList.add(items[0].theme);
+        cycleLabel.classList.add('reveal-up');
+
+        setInterval(async () => {
+            // PHASE 1: Exit
+            cycleLabel.classList.remove('reveal-up');
+            cycleLabel.classList.add('exit-up');
+
+            await new Promise(r => setTimeout(r, 500));
+
+            // PHASE 2: Swap
+            h1.classList.remove(items[idx].theme);
             idx = (idx + 1) % items.length;
-            cycleLabel.classList.remove('text-flip-up');
-            void cycleLabel.offsetWidth; // trigger reflow
+            h1.classList.add(items[idx].theme);
+
             cycleLabel.textContent = items[idx].text;
-            cycleLabel.classList.add('text-flip-up');
             cycleIcon.innerHTML = `<i class="${items[idx].icon}"></i>`;
-        }, 3000);
+
+            // PHASE 3: Reveal
+            cycleLabel.classList.remove('exit-up');
+            void cycleLabel.offsetWidth; // force reflow
+            cycleLabel.classList.add('reveal-up');
+        }, 3500);
     }
 
     // 1. Identify Elements
