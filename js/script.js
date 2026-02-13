@@ -559,6 +559,27 @@ window.renderBlogPost = function () {
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
+    // 0. Hero Title Animation (Firebase style)
+    const cycleLabel = document.getElementById('cycle-label');
+    const cycleIcon = document.getElementById('cycle-icon');
+    const items = [
+        { text: 'Fruits', icon: 'ri-apple-fill' },
+        { text: 'Légumes', icon: 'ri-leaf-fill' },
+        { text: 'Paniers', icon: 'ri-shopping-basket-fill' }
+    ];
+
+    if (cycleLabel && cycleIcon) {
+        let idx = 0;
+        setInterval(() => {
+            idx = (idx + 1) % items.length;
+            cycleLabel.classList.remove('text-flip-up');
+            void cycleLabel.offsetWidth; // trigger reflow
+            cycleLabel.textContent = items[idx].text;
+            cycleLabel.classList.add('text-flip-up');
+            cycleIcon.innerHTML = `<i class="${items[idx].icon}"></i>`;
+        }, 3000);
+    }
+
     // 1. Identify Elements
     const prodCont = document.getElementById('products-container');
     const featuredCont = document.getElementById('featured-products-container');
