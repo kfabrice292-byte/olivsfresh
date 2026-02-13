@@ -95,10 +95,11 @@ function renderProductRows(list) {
 
     pBody.innerHTML = list.map(p => `
         <tr>
+            <td><input type="checkbox" class="promo-select" value="${p.id}"></td>
             <td><img src="${p.image || 'img/oli_logo.png'}" style="width:50px; height:50px; border-radius:12px; object-fit:cover; border:1px solid #eee;" onerror="this.src='img/oli_logo.png'"></td>
             <td>
                 <div style="font-weight:700;">${p.name}</div>
-                <div style="font-size:0.75rem; color:#999;">ID: ${p.id.substring(0, 8)}...</div>
+                ${p.tag ? `<span style="font-size:0.7rem; background:var(--accent); color:var(--primary-dark); padding:2px 6px; border-radius:4px; font-weight:700;">${p.tag}</span>` : ''}
             </td>
             <td><span style="font-size:0.85rem; color:#64748b;">${window.getProductTag ? window.getProductTag(p.category) : p.category}</span></td>
             <td>
@@ -161,27 +162,83 @@ window.filterAdminProducts = function () {
     renderProductRows(filtered);
 };
 
-// --- WHATSAPP GENERATOR ---
+// --- STATS LOGIC ---
+function updateStats() {
+    if (!window.products) return;
+    const total = window.products.length;
+    const inactive = window.products.filter(p => p.active === false).length;
+    const blog = window.blogPosts ? window.blogPosts.length : 0;
+
+    const elTotal = document.getElementById('stat-total-products');
+    const elInactive = document.getElementById('stat-inactive-products');
+    const elBlog = document.getElementById('stat-total-blog');
+
+    if (elTotal) elTotal.textContent = total;
+    if (elInactive) elInactive.textContent = inactive;
+    if (elBlog) elBlog.textContent = blog;
+}
+
+// --- SEARCH & FILTER ---
+window.filterAdminProducts = function () {
+    const term = document.getElementById('product-search').value.toLowerCase();
+    const filtered = window.products.filter(p =>
+        p.name.toLowerCase().includes(term) ||
+        (p.category && p.category.toLowerCase().includes(term)) ||
+        (p.tag && p.tag.toLowerCase().includes(term))
+    );
+    renderProductRows(filtered);
+};
+
+// --- UTILS ---
+window.toggleAllCheckboxes = function (source) {
+    const checkboxes = document.querySelectorAll('.promo-select');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+};
+
+// --- WHATSAPP GENERATOR PRO ---
 window.openWhatsAppModal = function () {
+    const selectedIds = Array.from(document.querySelectorAll('.promo-select:checked')).map(cb => cb.value);
+
+    if (selectedIds.length === 0) {
+        return alert("Veuillez cocher au moins un produit dans la liste pour générer la promo !");
+    }
+
     const intro = document.getElementById('wa-intro').value;
-    const activeProducts = window.products.filter(p => p.active !== false);
+    const selectedProducts = window.products.filter(p => selectedIds.includes(p.id));
 
-    // Sort by category
-    const categories = [...new Set(activeProducts.map(p => p.category))];
+    const categoryEmojis = {
+        'fruit': '🍎',
+        'vegetable': '🥬',
+        'aromatic': '🌿',
+        'tuber': '🥔',
+        'processed': '🥤',
+        'subscription': '📦'
+    };
 
-    let message = `${intro}\n\n`;
+    let message = `*${intro.toUpperCase()}* 🌿✨\n\n`;
 
-    categories.forEach(cat => {
-        const catName = window.getProductTag ? window.getProductTag(cat) : cat;
-        const products = activeProducts.filter(p => p.category === cat);
-        message += `📍 *${catName.toUpperCase()}*\n`;
-        products.forEach(p => {
-            message += `- ${p.name} : ${p.price} FCFA / ${p.unit}\n`;
-        });
-        message += `\n`;
+    // Group by category
+    const grouped = {};
+    selectedProducts.forEach(p => {
+        if (!grouped[p.category]) grouped[p.category] = [];
+        grouped[p.category].push(p);
     });
 
-    message += `🛒 Commandez ici : https://wa.me/22677973958\n✨ Oliv's Fresh : La qualité chez vous !`;
+    for (const [cat, items] of Object.entries(grouped)) {
+        const emoji = categoryEmojis[cat] || '📍';
+        const catName = window.getProductTag ? window.getProductTag(cat) : cat;
+
+        message += `${emoji} *${catName.toUpperCase()}*\n`;
+        items.forEach(p => {
+            message += `• ${p.name} : *${p.price}F*/${p.unit}\n`;
+        });
+        message += `\n`;
+    }
+
+    message += `--- \n`;
+    message += `🛵 *Livraison rapide sur Ouagadougou !*\n`;
+    message += `� *Commander ici :* wa.me/22677973958\n`;
+    message += `✨ _Oliv's Fresh : Le champ dans votre cuisine._`;
 
     document.getElementById('wa-preview').innerText = message;
     document.getElementById('whatsapp-modal').classList.add('active');

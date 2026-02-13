@@ -524,10 +524,13 @@
                         Administrateur 👋</p>
                     <h1>Tableau de Bord</h1>
                 </div>
-                <div style="display: flex; gap: 12px;">
-                    <button class="btn-pro" style="background: #f1f5f9; color: var(--primary);"
+                <div style="display:flex; gap: 12px;">
+                    <button class="btn-pro" style="background: #e2e8f0; color: #475569;"
                         onclick="window.open('index.html', '_blank')">
                         <i class="ri-external-link-line"></i> Voir le site
+                    </button>
+                    <button class="btn-pro btn-whatsapp" onclick="openWhatsAppModal()">
+                        <i class="ri-whatsapp-line"></i> Créer une Promo
                     </button>
                     <button class="btn-pro btn-primary-pro" onclick="openProductModal()">
                         <i class="ri-add-circle-line"></i> Nouveau Produit
@@ -583,6 +586,8 @@
                     <table class="data-table">
                         <thead>
                             <tr>
+                                <th><input type="checkbox" id="check-all-products" onclick="toggleAllCheckboxes(this)">
+                                </th>
                                 <th>Image</th>
                                 <th>Nom</th>
                                 <th>Catégorie</th>
