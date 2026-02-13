@@ -1,3 +1,18 @@
+// --- HELPERS ---
+window.formatPrice = (p) => new Intl.NumberFormat('fr-FR').format(p) + ' FCFA';
+
+window.getProductTag = (cat) => {
+    const tags = {
+        'fruit': 'Fruits',
+        'vegetable': 'Légumes',
+        'aromatic': 'Herbes & Épices',
+        'tuber': 'Tubercules',
+        'processed': 'Transformés',
+        'subscription': 'Paniers'
+    };
+    return tags[cat] || cat;
+};
+
 const PRODUCTS_DATA = [
     // --- 1. FRUITS LOCAUX ---
     { id: 'f1', name: 'Mangue', price: 1000, unit: 'kg', category: 'fruit', image: 'img/produits/fruits/mangue.jpg', tag: 'Local' },

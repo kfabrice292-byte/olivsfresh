@@ -31,7 +31,7 @@ function logout() {
     });
 }
 
-// Global exposure for HTML onclicks
+// Global exposure
 window.login = login;
 window.logout = logout;
 
@@ -55,73 +55,25 @@ async function renderAdminTables() {
     const pBody = document.getElementById('products-table-body');
     const bBody = document.getElementById('blog-table-body');
 
-    if (pBody) pBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Chargement...</td></tr>';
+    if (pBody) pBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 2rem;"><i class="ri-loader-4-line ri-spin"></i> Chargement...</td></tr>';
 
-    // Refresh global data
     await window.initializeData();
+    updateStats();
 
-    // Products Table
     if (pBody) {
-        // Filter out any products with missing data before rendering
-        const validProducts = window.products.filter(p => p && p.name && typeof p.name === 'string');
-        if (validProducts.length === 0) {
-            pBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:2rem;">Aucun produit.</td></tr>';
-        } else {
-            pBody.innerHTML = validProducts.map(p => `
-                <tr>
-                    <td><img src="${p.image || 'img/oli_logo.png'}" style="width:40px; height:40px; border-radius:4px; object-fit:cover;" onerror="this.src='img/oli_logo.png'"></td>
-                    <td><strong style="font-size:1.1rem;">${p.name}</strong></td>
-                    <td><span style="font-size:0.85rem; color:#666;">${window.getProductTag(p.category)}</span></td>
-                    <td>
-                        <div style="display:flex; align-items:center; gap:5px;">
-                            <input type="number" value="${p.price || 0}" id="price-${p.id}" style="width:100px; padding:5px; border:1px solid #ddd; border-radius:4px;">
-                            <span style="font-size:0.8rem;">FCFA</span>
-                        </div>
-                    </td>
-                    <td>
-                        <select id="unit-${p.id}" style="padding:5px; border:1px solid #ddd; border-radius:4px;">
-                            <option value="kg" ${p.unit === 'kg' ? 'selected' : ''}>kg</option>
-                            <option value="unité" ${p.unit === 'unité' ? 'selected' : ''}>unité</option>
-                            <option value="botte" ${p.unit === 'botte' ? 'selected' : ''}>botte</option>
-                            <option value="barquette" ${p.unit === 'barquette' ? 'selected' : ''}>barquette</option>
-                            <option value="1L" ${p.unit === '1L' ? 'selected' : ''}>1L</option>
-                            <option value="bol" ${p.unit === 'bol' ? 'selected' : ''}>bol</option>
-                            <option value="sachet" ${p.unit === 'sachet' ? 'selected' : ''}>sachet</option>
-                        </select>
-                    </td>
-                    <td>
-                        <div class="status-toggle ${p.active !== false ? 'status-active' : 'status-inactive'}" 
-                             onclick="toggleProductStatus('${p.id}', ${p.active !== false})">
-                            <i class="${p.active !== false ? 'ri-eye-line' : 'ri-eye-off-line'}" style="margin-right:5px;"></i>
-                            ${p.active !== false ? 'Actif' : 'Inactif'}
-                        </div>
-                    </td>
-                    <td style="white-space:nowrap;">
-                        <button class="action-btn edit-btn" title="Sauvegarder" onclick="quickUpdate('${p.id}')">
-                            <i class="ri-save-3-line" style="color:var(--primary); font-size:1.4rem;"></i>
-                        </button>
-                        <button class="action-btn" title="Plus d'options" onclick="openProductEdit('${p.id}')">
-                            <i class="ri-settings-4-line"></i>
-                        </button>
-                        <button class="action-btn delete-btn" title="Supprimer" onclick="deleteProduct('${p.id}')">
-                            <i class="ri-delete-bin-line"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        }
+        const validProducts = window.products.filter(p => p && p.name);
+        renderProductRows(validProducts);
     }
 
-    // Blog Table
     if (bBody) {
         if (window.blogPosts.length === 0) {
             bBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem;">Aucun article.</td></tr>';
         } else {
             bBody.innerHTML = window.blogPosts.map(b => `
                 <tr>
-                    <td><img src="${b.image || 'img/oli_logo.png'}" style="width:40px; height:40px; border-radius:4px; object-fit:cover;" onerror="this.src='img/oli_logo.png'"></td>
-                    <td>${b.title}</td>
-                    <td>${b.tag}</td>
+                    <td><img src="${b.image || 'img/oli_logo.png'}" style="width:40px; height:40px; border-radius:10px; object-fit:cover;" onerror="this.src='img/oli_logo.png'"></td>
+                    <td style="font-weight:600;">${b.title}</td>
+                    <td><span style="background:#f1f5f9; padding:4px 10px; border-radius:6px; font-size:0.8rem;">${b.tag}</span></td>
                     <td>
                         <button class="action-btn edit-btn" onclick="openBlogEdit('${b.id}')"><i class="ri-edit-line"></i></button>
                         <button class="action-btn delete-btn" onclick="deleteBlogPost('${b.id}')"><i class="ri-delete-bin-line"></i></button>
@@ -132,21 +84,168 @@ async function renderAdminTables() {
     }
 }
 
-// --- TAB SWITCHING ---
-window.switchTab = function (tab) {
-    const items = document.querySelectorAll('.nav-item');
-    items.forEach(i => i.classList.remove('active'));
+function renderProductRows(list) {
+    const pBody = document.getElementById('products-table-body');
+    if (!pBody) return;
 
-    // Add active to the clicked one if event exists
-    if (window.event && window.event.currentTarget) {
-        window.event.currentTarget.classList.add('active');
+    if (list.length === 0) {
+        pBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:2rem;">Aucun résultat trouvé.</td></tr>';
+        return;
     }
 
-    document.getElementById('view-products').style.display = (tab === 'products') ? 'block' : 'none';
-    document.getElementById('view-blog').style.display = (tab === 'blog') ? 'block' : 'none';
+    pBody.innerHTML = list.map(p => `
+        <tr>
+            <td><img src="${p.image || 'img/oli_logo.png'}" style="width:50px; height:50px; border-radius:12px; object-fit:cover; border:1px solid #eee;" onerror="this.src='img/oli_logo.png'"></td>
+            <td>
+                <div style="font-weight:700;">${p.name}</div>
+                <div style="font-size:0.75rem; color:#999;">ID: ${p.id.substring(0, 8)}...</div>
+            </td>
+            <td><span style="font-size:0.85rem; color:#64748b;">${window.getProductTag ? window.getProductTag(p.category) : p.category}</span></td>
+            <td>
+                <div style="display:flex; align-items:center; gap:5px;">
+                    <input type="number" value="${p.price || 0}" id="price-${p.id}" style="width:90px; padding:8px; border:1px solid #e2e8f0; border-radius:8px; font-weight:600;">
+                </div>
+            </td>
+            <td>
+                <select id="unit-${p.id}" style="padding:8px; border:1px solid #e2e8f0; border-radius:8px; width:90px;">
+                    <option value="kg" ${p.unit === 'kg' ? 'selected' : ''}>kg</option>
+                    <option value="unité" ${p.unit === 'unité' ? 'selected' : ''}>unité</option>
+                    <option value="botte" ${p.unit === 'botte' ? 'selected' : ''}>botte</option>
+                    <option value="barquette" ${p.unit === 'barquette' ? 'selected' : ''}>barquette</option>
+                    <option value="1L" ${p.unit === '1L' ? 'selected' : ''}>1L</option>
+                    <option value="bol" ${p.unit === 'bol' ? 'selected' : ''}>bol</option>
+                    <option value="sachet" ${p.unit === 'sachet' ? 'selected' : ''}>sachet</option>
+                </select>
+            </td>
+            <td>
+                <div class="badge-status ${p.active !== false ? 'badge-active' : 'badge-inactive'}" 
+                     onclick="toggleProductStatus('${p.id}', ${p.active !== false})" style="cursor:pointer;">
+                    <i class="${p.active !== false ? 'ri-checkbox-circle-line' : 'ri-error-warning-line'}"></i>
+                    ${p.active !== false ? 'En ligne' : 'Hors-ligne'}
+                </div>
+            </td>
+            <td style="white-space:nowrap;">
+                <button class="action-btn" title="Sauvegarde Rapide" onclick="quickUpdate('${p.id}')">
+                    <i class="ri-save-fill" style="color:var(--primary);"></i>
+                </button>
+                <button class="action-btn" title="Modifier" onclick="openProductEdit('${p.id}')">
+                    <i class="ri-pencil-line" style="color:#64748b;"></i>
+                </button>
+                <button class="action-btn delete-btn" title="Supprimer" onclick="deleteProduct('${p.id}')">
+                    <i class="ri-delete-bin-7-line"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// --- STATS LOGIC ---
+function updateStats() {
+    const total = window.products.length;
+    const inactive = window.products.filter(p => p.active === false).length;
+    const blog = window.blogPosts.length;
+
+    document.getElementById('stat-total-products').textContent = total;
+    document.getElementById('stat-inactive-products').textContent = inactive;
+    document.getElementById('stat-total-blog').textContent = blog;
+}
+
+// --- SEARCH & FILTER ---
+window.filterAdminProducts = function () {
+    const term = document.getElementById('product-search').value.toLowerCase();
+    const filtered = window.products.filter(p =>
+        p.name.toLowerCase().includes(term) ||
+        p.category.toLowerCase().includes(term) ||
+        (p.tag && p.tag.toLowerCase().includes(term))
+    );
+    renderProductRows(filtered);
 };
 
-// --- CRUD OPS ---
+// --- WHATSAPP GENERATOR ---
+window.openWhatsAppModal = function () {
+    const intro = document.getElementById('wa-intro').value;
+    const activeProducts = window.products.filter(p => p.active !== false);
+
+    // Sort by category
+    const categories = [...new Set(activeProducts.map(p => p.category))];
+
+    let message = `${intro}\n\n`;
+
+    categories.forEach(cat => {
+        const catName = window.getProductTag ? window.getProductTag(cat) : cat;
+        const products = activeProducts.filter(p => p.category === cat);
+        message += `📍 *${catName.toUpperCase()}*\n`;
+        products.forEach(p => {
+            message += `- ${p.name} : ${p.price} FCFA / ${p.unit}\n`;
+        });
+        message += `\n`;
+    });
+
+    message += `🛒 Commandez ici : https://wa.me/22677973958\n✨ Oliv's Fresh : La qualité chez vous !`;
+
+    document.getElementById('wa-preview').innerText = message;
+    document.getElementById('whatsapp-modal').classList.add('active');
+};
+
+window.copyWhatsAppPromo = function () {
+    const text = document.getElementById('wa-preview').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        if (window.showToast) window.showToast("Message copié !");
+        else alert("Message copié dans le presse-papier !");
+    });
+};
+
+// --- EXPORT JSON ---
+window.exportDataToJSON = function () {
+    const data = {
+        products: window.products,
+        blog: window.blogPosts,
+        exportDate: new Date().toISOString()
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `olivs_fresh_backup_${new Date().toLocaleDateString()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
+// --- CRUD & OTHERS (Existing updated) ---
+window.switchTab = function (tab) {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    if (window.event && window.event.currentTarget) window.event.currentTarget.classList.add('active');
+
+    document.querySelectorAll('.tab-view').forEach(v => v.style.display = 'none');
+    const view = document.getElementById(`view-${tab}`);
+    if (view) view.style.display = 'block';
+};
+
+window.quickUpdate = async function (id) {
+    const price = parseInt(document.getElementById(`price-${id}`).value);
+    const unit = document.getElementById(`unit-${id}`).value;
+    if (isNaN(price)) return alert("Prix invalide");
+
+    const btn = window.event ? window.event.currentTarget : null;
+    if (btn) btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i>';
+
+    try {
+        await window.dataService.updateProduct(id, { price, unit });
+        await renderAdminTables();
+        if (window.showToast) window.showToast("Mise à jour réussie !");
+    } catch (e) {
+        alert("Erreur: " + e.message);
+    }
+};
+
+window.toggleProductStatus = async function (id, currentStatus) {
+    try {
+        await window.dataService.updateProduct(id, { active: !currentStatus });
+        await renderAdminTables();
+    } catch (e) { alert(e.message); }
+};
+
 window.deleteProduct = async function (id) {
     if (confirm("Supprimer ce produit ?")) {
         await window.dataService.deleteProduct(id);
@@ -161,134 +260,6 @@ window.deleteBlogPost = async function (id) {
     }
 };
 
-// --- FORM HANDLING ---
-function getProductFormData() {
-    return {
-        id: document.getElementById('p-id').value,
-        name: document.getElementById('p-name').value,
-        category: document.getElementById('p-category').value,
-        price: parseInt(document.getElementById('p-price').value),
-        oldPrice: parseInt(document.getElementById('p-old-price').value) || null,
-        tag: document.getElementById('p-tag').value,
-        antiGaspiReason: document.getElementById('p-anti-gaspi-reason').value,
-        unit: document.getElementById('p-unit').value,
-        image: document.getElementById('p-image').value,
-        file: document.getElementById('p-file').files[0]
-    };
-}
-
-window.quickUpdate = async function (id) {
-    const price = parseInt(document.getElementById(`price-${id}`).value);
-    const unit = document.getElementById(`unit-${id}`).value;
-
-    if (isNaN(price)) return alert("Prix invalide");
-
-    const btn = window.event ? window.event.currentTarget : null;
-    const oldIcon = btn ? btn.innerHTML : '';
-    if (btn) btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i>';
-
-    try {
-        await window.dataService.updateProduct(id, { price, unit });
-        await renderAdminTables();
-        if (window.showToast) window.showToast("Mise à jour réussie !");
-        else alert("Mise à jour réussie !");
-    } catch (e) {
-        alert("Erreur: " + e.message);
-    } finally {
-        if (btn) btn.innerHTML = oldIcon;
-    }
-};
-
-window.toggleProductStatus = async function (id, currentStatus) {
-    try {
-        const newStatus = !currentStatus;
-        await window.dataService.updateProduct(id, { active: newStatus });
-        await renderAdminTables();
-        if (window.showToast) window.showToast(newStatus ? "Produit activé" : "Produit désactivé");
-    } catch (e) {
-        alert("Erreur: " + e.message);
-    }
-};
-
-window.saveProduct = async function () {
-    const data = getProductFormData();
-    if (!data.name || isNaN(data.price)) return alert("Nom et Prix requis");
-
-    const btn = window.event ? window.event.target : null;
-    if (btn) { btn.disabled = true; btn.textContent = "..."; }
-
-    try {
-        let imageUrl = data.image || 'img/oli_logo.png';
-
-        if (data.file) {
-            const path = `products/${Date.now()}_${data.file.name}`;
-            imageUrl = await window.firebaseService.uploadFile(data.file, path);
-        }
-
-        const productObj = {
-            name: data.name,
-            category: data.category,
-            price: data.price,
-            oldPrice: data.oldPrice,
-            tag: data.tag,
-            antiGaspiReason: data.antiGaspiReason,
-            unit: data.unit,
-            image: imageUrl
-        };
-
-        if (data.id) {
-            await window.dataService.updateProduct(data.id, productObj);
-        } else {
-            await window.dataService.addProduct(productObj);
-        }
-
-        closeModals();
-        renderAdminTables();
-    } catch (e) {
-        alert("Erreur: " + e.message);
-    } finally {
-        if (btn) { btn.disabled = false; btn.textContent = "Enregistrer"; }
-    }
-};
-
-window.saveBlogPost = async function () {
-    const title = document.getElementById('b-title').value;
-    const tag = document.getElementById('b-tag').value;
-    const desc = document.getElementById('b-desc').value;
-    const id = document.getElementById('b-id').value;
-    const url = document.getElementById('b-image').value;
-    const file = document.getElementById('b-file').files[0];
-
-    if (!title) return alert("Titre requis");
-
-    const btn = window.event ? window.event.target : null;
-    if (btn) { btn.disabled = true; btn.textContent = "..."; }
-
-    try {
-        let img = url || 'img/oli_logo.png';
-        if (file) {
-            const path = `blog/${Date.now()}_${file.name}`;
-            img = await window.firebaseService.uploadFile(file, path);
-        }
-
-        const postObj = { title, tag, desc, image: img };
-
-        if (id) {
-            await window.dataService.updateBlogPost(id, postObj);
-        } else {
-            await window.dataService.addBlogPost(postObj);
-        }
-
-        closeModals();
-        renderAdminTables();
-    } catch (e) {
-        alert("Erreur: " + e.message);
-    } finally {
-        if (btn) { btn.disabled = false; btn.textContent = "Enregistrer"; }
-    }
-};
-
-// --- MODALS ---
 window.openProductModal = function () {
     resetProductForm();
     document.getElementById('product-modal').classList.add('active');
@@ -350,49 +321,79 @@ function resetBlogForm() {
     document.getElementById('b-file').value = '';
 }
 
-// --- MIGRATION LOGIC (ONCE) ---
-window.migrateLocalData = async function () {
-    if (!confirm("Voulez-vous migrer tous les produits locaux vers Firebase ? (Les doublons par nom seront ignorés)")) return;
+window.saveProduct = async function () {
+    const name = document.getElementById('p-name').value;
+    const category = document.getElementById('p-category').value;
+    const price = parseInt(document.getElementById('p-price').value);
+    const oldPrice = parseInt(document.getElementById('p-old-price').value) || null;
+    const tag = document.getElementById('p-tag').value;
+    const antiGaspiReason = document.getElementById('p-anti-gaspi-reason').value;
+    const unit = document.getElementById('p-unit').value;
+    const image = document.getElementById('p-image').value;
+    const file = document.getElementById('p-file').files[0];
+    const id = document.getElementById('p-id').value;
 
-    const btn = window.event.target;
-    const oldText = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = "Migration en cours...";
+    if (!name || isNaN(price)) return alert("Nom et Prix requis");
+
+    const btn = window.event ? window.event.target : null;
+    if (btn) { btn.disabled = true; btn.textContent = "..."; }
 
     try {
-        const existingProducts = await window.firebaseService.getProducts();
-        const existingNames = existingProducts.filter(p => p && p.name).map(p => p.name.toLowerCase());
-
-        let pCount = 0;
-        for (const p of PRODUCTS_DATA) {
-            if (!existingNames.includes(p.name.toLowerCase())) {
-                const { id, ...data } = p;
-                await window.firebaseService.addProduct({ ...data, active: true });
-                pCount++;
-            }
+        let imageUrl = image || 'img/oli_logo.png';
+        if (file) {
+            const path = `products/${Date.now()}_${file.name}`;
+            imageUrl = await window.firebaseService.uploadFile(file, path);
         }
 
-        const existingPosts = await window.firebaseService.getBlogPosts();
-        const existingTitles = existingPosts.filter(p => p && p.title).map(p => p.title.toLowerCase());
+        const productObj = { name, category, price, oldPrice, tag, antiGaspiReason, unit, image: imageUrl };
 
-        let bCount = 0;
-        for (const b of BLOG_DATA) {
-            if (!existingTitles.includes(b.title.toLowerCase())) {
-                const { id, ...data } = b;
-                await window.firebaseService.addBlogPost(data);
-                bCount++;
-            }
-        }
+        if (id) await window.dataService.updateProduct(id, productObj);
+        else await window.dataService.addProduct(productObj);
 
-        alert(`Migration terminée !\nProduits ajoutés : ${pCount}\nArticles ajoutés : ${bCount}`);
-        location.reload();
-    } catch (e) {
-        console.error("Migration Error:", e);
-        alert("Erreur lors de la migration : " + e.message);
-    } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.textContent = oldText;
-        }
-    }
+        closeModals();
+        renderAdminTables();
+    } catch (e) { alert(e.message); }
+    finally { if (btn) { btn.disabled = false; btn.textContent = "Enregistrer"; } }
 };
+
+window.saveBlogPost = async function () {
+    const title = document.getElementById('b-title').value;
+    const tag = document.getElementById('b-tag').value;
+    const desc = document.getElementById('b-desc').value;
+    const id = document.getElementById('b-id').value;
+    const url = document.getElementById('b-image').value;
+    const file = document.getElementById('b-file').files[0];
+
+    if (!title) return alert("Titre requis");
+
+    const btn = window.event ? window.event.target : null;
+    if (btn) { btn.disabled = true; btn.textContent = "..."; }
+
+    try {
+        let img = url || 'img/oli_logo.png';
+        if (file) {
+            const path = `blog/${Date.now()}_${file.name}`;
+            img = await window.firebaseService.uploadFile(file, path);
+        }
+        const postObj = { title, tag, desc, image: img, date: new Date().toLocaleDateString('fr-FR') };
+        if (id) await window.dataService.updateBlogPost(id, postObj);
+        else await window.dataService.addBlogPost(postObj);
+
+        closeModals();
+        renderAdminTables();
+    } catch (e) { alert(e.message); }
+    finally { if (btn) { btn.disabled = false; btn.textContent = "Enregistrer"; } }
+};
+
+window.migrateLocalData = async function () {
+    if (!confirm("Voulez-vous migrer tous les produits locaux vers Firebase ?")) return;
+    try {
+        for (const p of PRODUCTS_DATA) {
+            const { id, ...data } = p;
+            await window.firebaseService.addProduct({ ...data, active: true });
+        }
+        alert("Migration terminée !");
+        location.reload();
+    } catch (e) { alert(e.message); }
+};
+
