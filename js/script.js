@@ -1,5 +1,5 @@
-// Oliv's Fresh - Script v1.6 (Focal Zoom Edition)
-console.log("🚀 Oliv's Fresh Script v1.6 Loaded");
+// Oliv's Fresh - Script v2.1 (Performance & Fixed Redirects)
+console.log("🚀 Oliv's Fresh Script v2.1 Loaded");
 
 // --- HELPERS ---
 window.formatPrice = (p) => {
@@ -277,11 +277,10 @@ window.renderProducts = (container, category = 'all', limit = null, searchTerm =
 
     container.innerHTML = '';
 
-    // For Infinite Scroll (Marquee), we clone the list to make it seamless
+    // For automatic left-to-right infinite marquee, we duplicate the list
     let displayList = list;
     if (container.id === 'featured-products-container') {
-        // Double or Triple the list for a seamless loop
-        displayList = [...list, ...list, ...list];
+        displayList = [...list, ...list];
     }
 
     displayList.forEach((p, idx) => {
@@ -325,14 +324,6 @@ window.renderProducts = (container, category = 'all', limit = null, searchTerm =
         `;
         container.appendChild(div);
     });
-
-    // Update Dots Slider if this is the featured container
-    if (container.id === 'featured-products-container') {
-        const dotsCont = document.getElementById('featured-dots');
-        if (dotsCont) {
-            dotsCont.innerHTML = list.map((_, i) => `<div class="dot ${i === 0 ? 'active' : ''}" onclick="window.scrollToItem(${i})"></div>`).join('');
-        }
-    }
 };
 
 window.slideFeatured = function (dir) {
@@ -660,59 +651,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     setTimeout(removeLoader, 1000);
 
-    // 13. Focal Zoom Animation for Marquee
-    const initFocalZoom = () => {
-        const marquee = document.getElementById('featured-products-container');
-        if (!marquee) return;
-
-        const updateFocal = () => {
-            const cards = marquee.querySelectorAll('.product-card');
-            const viewportCenter = window.innerWidth / 2;
-
-            cards.forEach(card => {
-                const rect = card.getBoundingClientRect();
-                const cardCenter = rect.left + rect.width / 2;
-
-                // Calculate distance from center (0 = perfectly centered)
-                const distance = Math.abs(viewportCenter - cardCenter);
-
-                // Threshold: how wide the "zoom zone" is
-                const maxDistance = window.innerWidth / 2.5;
-
-                if (distance < maxDistance) {
-                    // Power curve: scales from 1.0 at edge of zone to 1.25 at center
-                    const power = 1 - (distance / maxDistance);
-                    const scale = 1 + (power * 0.25);
-                    card.style.transform = `scale(${scale})`;
-                    card.style.filter = `brightness(${1 + (power * 0.1)})`;
-                    card.style.boxShadow = `0 ${10 + (power * 20)}px ${25 + (power * 20)}px rgba(0,0,0,${0.1 + (power * 0.15)})`;
-                } else {
-                    card.style.transform = `scale(1)`;
-                    card.style.filter = `brightness(1)`;
-                    card.style.boxShadow = `var(--shadow-sm)`;
-                }
-            });
-            requestAnimationFrame(updateFocal);
-        };
-        requestAnimationFrame(updateFocal);
-    };
-
     // 13. AOS
     if (typeof AOS !== 'undefined') AOS.init({ duration: 800, once: true });
-
-    // Start Focal Zoom
-    initFocalZoom();
-
-    // 15. Dots Sync on Scroll
-    const featuredScroll = document.querySelector('.featured-scroll-container');
-    if (featuredScroll) {
-        featuredScroll.onscroll = () => {
-            const index = Math.round(featuredScroll.scrollLeft / (featuredScroll.clientWidth * 0.8));
-            document.querySelectorAll('.dot').forEach((d, i) => {
-                d.classList.toggle('active', i === index);
-            });
-        };
-    }
 });
 
 // 14. Mobile VH Fix (Anti-jump)
