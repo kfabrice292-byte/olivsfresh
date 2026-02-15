@@ -1,3 +1,6 @@
+// Oliv's Fresh - Script v1.2 (Strict Firebase Only)
+console.log("🚀 Oliv's Fresh Script v1.2 Loaded");
+
 // --- HELPERS ---
 window.formatPrice = (p) => {
     if (p === undefined || p === null || isNaN(p)) return "0 FCFA";
@@ -251,14 +254,15 @@ window.renderProducts = function (container, category, limit = null, searchTerm 
     // Filter out inactive products
     list = list.filter(p => p.active !== false);
 
-    // Apply search filter if present
+    // Apply search filter if present (Defensive check for non-string properties)
     if (searchTerm) {
         const term = searchTerm.toLowerCase().trim();
-        list = list.filter(p =>
-            p.name.toLowerCase().includes(term) ||
-            p.category.toLowerCase().includes(term) ||
-            (p.tag && p.tag.toLowerCase().includes(term))
-        );
+        list = list.filter(p => {
+            const nameMatch = p.name && typeof p.name === 'string' && p.name.toLowerCase().includes(term);
+            const catMatch = p.category && typeof p.category === 'string' && p.category.toLowerCase().includes(term);
+            const tagMatch = p.tag && typeof p.tag === 'string' && p.tag.toLowerCase().includes(term);
+            return nameMatch || catMatch || tagMatch;
+        });
     }
 
     if (limit && limit > 0 && !searchTerm) list = list.slice(0, limit);
