@@ -568,3 +568,42 @@ window.migrateLocalData = async function () {
     } catch (e) { alert(e.message); }
 };
 
+window.sanitizeDatabase = async function () {
+    if (!confirm("⚠️ Action irréversible : Tous les produits corrompus (sans nom) seront supprimés et les autres mis au format strict. Continuer ?")) return;
+
+    const btn = window.event ? window.event.currentTarget : null;
+    const original = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Nettoyage...';
+    }
+
+    try {
+        const pList = await window.firebaseService.getProducts();
+        let deleted = 0;
+        let fixed = 0;
+
+        for (const p of pList) {
+            if (!p || !p.name || typeof p.name !== 'string' || p.name.trim() === "") {
+                await window.firebaseService.deleteProduct(p.id);
+                deleted++;
+            } else {
+                const cleanData = prepareProductData(p);
+                await window.firebaseService.updateProduct(p.id, cleanData);
+                fixed++;
+            }
+        }
+
+        alert(`✅ Nettoyage terminé !\n- Produits corrompus supprimés : ${deleted}\n- Produits mis à jour au format strict : ${fixed}`);
+        location.reload();
+    } catch (e) {
+        console.error("Sanitize Error:", e);
+        alert("Erreur lors du nettoyage : " + e.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = original;
+        }
+    }
+};
+

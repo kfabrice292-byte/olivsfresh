@@ -685,9 +685,13 @@
                         <input type="text" value="+226 77 97 39 58" disabled>
                     </div>
 
-                    <div style="margin-top: 2rem;">
+                    <div style="margin-top: 2rem; display: flex; gap: 15px; flex-wrap: wrap;">
                         <button class="btn-pro btn-primary-pro" onclick="exportDataToJSON()">
                             <i class="ri-download-cloud-2-line"></i> Sauvegarder toute la base (JSON)
+                        </button>
+                        <button class="btn-pro" style="background: #fff1f2; color: #be123c; border: 1px solid #fecaca;"
+                            onclick="sanitizeDatabase()">
+                            <i class="ri-shield-check-line"></i> Nettoyer & Réparer la Base de Données
                         </button>
                     </div>
                 </div>
