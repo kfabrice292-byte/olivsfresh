@@ -583,13 +583,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 9. Navigation Active State
+    // 9. Navigation Active State (Strict and Folder-aware)
     const currentPath = window.location.pathname.split('/').pop() || 'index.html';
     document.querySelectorAll('.nav-links a').forEach(link => {
         const href = link.getAttribute('href');
-        if (href === currentPath || (currentPath === 'index.html' && href === '#accueil')) {
-            link.classList.add('active');
-        }
+        const isActive = href === currentPath ||
+            (currentPath === 'index.html' && (href === './' || href === 'index.html')) ||
+            (currentPath === '' && href === './');
+        if (isActive) link.classList.add('active');
     });
 
     // 10. Search
