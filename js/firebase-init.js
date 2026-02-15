@@ -21,87 +21,72 @@ window.firebaseService = {
     storage: storage,
 
     async uploadFile(file, path) {
-        try {
+        return new Promise((resolve, reject) => {
+            if (!storage) return reject(new Error("Firebase Storage not initialized"));
+
             const ref = storage.ref().child(path);
-            const snapshot = await ref.put(file);
-            return await snapshot.ref.getDownloadURL();
-        } catch (e) {
-            console.error("Storage Error:", e);
-            throw e;
-        }
+            const uploadTask = ref.put(file);
+
+            console.log(`Starting upload: ${path}`);
+
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    console.log('Upload is ' + Math.round(progress) + '% done');
+                },
+                (error) => {
+                    console.error("Storage Error during upload:", error);
+                    reject(error);
+                },
+                async () => {
+                    try {
+                        const url = await uploadTask.snapshot.ref.getDownloadURL();
+                        console.log("Upload successful, URL:", url);
+                        resolve(url);
+                    } catch (e) {
+                        reject(e);
+                    }
+                }
+            );
+        });
     },
 
     async getProducts() {
-        try {
-            const snapshot = await db.collection("products").get();
-            if (snapshot.empty) return [];
-            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        } catch (e) {
-            console.error("Firestore Error (Products):", e);
-            return [];
-        }
+        const snapshot = await db.collection("products").get();
+        if (snapshot.empty) return [];
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     },
 
     async addProduct(product) {
-        try {
-            await db.collection("products").add(product);
-        } catch (e) {
-            console.error("Firestore Error (Add Product):", e);
-            alert("Erreur lors de l'ajout. Vérifiez vos règles Firestore.");
-        }
+        return await db.collection("products").add(product);
     },
 
     async deleteProduct(id) {
-        try {
-            await db.collection("products").doc(id).delete();
-        } catch (e) {
-            console.error("Firestore Error (Delete Product):", e);
-        }
+        await db.collection("products").doc(id).delete();
     },
 
     async updateProduct(id, product) {
-        try {
-            const { id: _, ...data } = product;
-            await db.collection("products").doc(id).set(data, { merge: true });
-        } catch (e) {
-            console.error("Firestore Error (Update Product):", e);
-        }
+        const { id: _, ...data } = product;
+        await db.collection("products").doc(id).set(data, { merge: true });
     },
 
     async getBlogPosts() {
-        try {
-            const snapshot = await db.collection("blog").get();
-            if (snapshot.empty) return [];
-            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        } catch (e) {
-            console.error("Firestore Error (Blog):", e);
-            return [];
-        }
+        const snapshot = await db.collection("blog").get();
+        if (snapshot.empty) return [];
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     },
 
     async addBlogPost(post) {
-        try {
-            await db.collection("blog").add(post);
-        } catch (e) {
-            console.error("Firestore Error (Add Blog):", e);
-        }
+        return await db.collection("blog").add(post);
     },
 
     async deleteBlogPost(id) {
-        try {
-            await db.collection("blog").doc(id).delete();
-        } catch (e) {
-            console.error("Firestore Error (Delete Blog):", e);
-        }
+        await db.collection("blog").doc(id).delete();
     },
 
     async updateBlogPost(id, post) {
-        try {
-            const { id: _, ...data } = post;
-            await db.collection("blog").doc(id).update(data);
-        } catch (e) {
-            console.error("Firestore Error (Update Blog):", e);
-        }
+        const { id: _, ...data } = post;
+        await db.collection("blog").doc(id).update(data);
     }
 };
 

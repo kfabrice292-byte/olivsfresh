@@ -387,30 +387,66 @@ window.saveProduct = async function () {
     const antiGaspiReason = document.getElementById('p-anti-gaspi-reason').value;
     const unit = document.getElementById('p-unit').value;
     const image = document.getElementById('p-image').value;
-    const file = document.getElementById('p-file').files[0];
+    const fileInput = document.getElementById('p-file');
+    const file = fileInput.files[0];
     const id = document.getElementById('p-id').value;
 
     if (!name || isNaN(price)) return alert("Nom et Prix requis");
 
-    const btn = window.event ? window.event.target : null;
-    if (btn) { btn.disabled = true; btn.textContent = "..."; }
+    // Robust button selector
+    const btn = document.querySelector('#product-modal .btn-admin:not([style*="background"])') ||
+        (window.event ? window.event.currentTarget : null);
+
+    const originalText = btn ? btn.textContent : "Enregistrer";
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Traitement...';
+    }
 
     try {
         let imageUrl = image || 'img/oli_logo.png';
+
         if (file) {
+            // Check size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                throw new Error("L'image est trop lourde (max 5 Mo)");
+            }
             const path = `products/${Date.now()}_${file.name}`;
             imageUrl = await window.firebaseService.uploadFile(file, path);
         }
 
-        const productObj = { name, category, price, oldPrice, tag, antiGaspiReason, unit, image: imageUrl };
+        const productObj = {
+            name,
+            category,
+            price,
+            oldPrice,
+            tag,
+            antiGaspiReason,
+            unit,
+            image: imageUrl,
+            active: true,
+            updatedAt: new Date().toISOString()
+        };
 
-        if (id) await window.dataService.updateProduct(id, productObj);
-        else await window.dataService.addProduct(productObj);
+        if (id) {
+            await window.dataService.updateProduct(id, productObj);
+        } else {
+            await window.dataService.addProduct(productObj);
+        }
 
+        if (window.showToast) window.showToast("✅ Produit enregistré avec succès !");
         closeModals();
-        renderAdminTables();
-    } catch (e) { alert(e.message); }
-    finally { if (btn) { btn.disabled = false; btn.textContent = "Enregistrer"; } }
+        await renderAdminTables();
+    } catch (e) {
+        console.error("Save Error:", e);
+        alert("Erreur lors de l'enregistrement : " + e.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    }
 };
 
 window.saveBlogPost = async function () {
