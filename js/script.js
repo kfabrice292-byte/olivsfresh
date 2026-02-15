@@ -1,5 +1,5 @@
-// Oliv's Fresh - Script v1.2 (Strict Firebase Only)
-console.log("🚀 Oliv's Fresh Script v1.2 Loaded");
+// Oliv's Fresh - Script v1.3 (Strict Firebase Only)
+console.log("🚀 Oliv's Fresh Script v1.3 Loaded");
 
 // --- HELPERS ---
 window.formatPrice = (p) => {
@@ -281,7 +281,8 @@ window.renderProducts = function (container, category, limit = null, searchTerm 
         div.className = 'product-card';
         // Add AOS only if not limited (to avoid weirdness in small lists) or tune delay
         div.setAttribute('data-aos', 'fade-up');
-        div.setAttribute('data-aos-delay', (idx % 4) * 100);
+        // Smoother serial delay for a "fluid" appearance
+        div.setAttribute('data-aos-delay', idx * 100);
 
         // Use a placeholder if image fails
         const imgUrl = p.image || 'img/oli_logo.png';
@@ -486,8 +487,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (prodCont) window.renderProducts(prodCont, 'all');
 
         // Home Page
+        // Home Page - Fluid Render of first 5 active products
         if (featuredCont) {
-            const featuredList = window.products.slice(0, 5);
+            // Filter active first, then slice 5 to ensure we always show 5 if they exist
+            const activeProducts = window.products.filter(p => p.active !== false);
+            const featuredList = activeProducts.slice(0, 5);
+
             const originalProducts = window.products;
             window.products = featuredList;
             window.renderProducts(featuredCont, 'all');
