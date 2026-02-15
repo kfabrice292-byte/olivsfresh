@@ -381,6 +381,36 @@ const compressImage = (file, maxWidth = 600, quality = 0.6) => {
     });
 };
 
+// --- IMAGE UPLOAD (ImgBB FREE HOSTING) ---
+const IMGBB_API_KEY = 'e44673c8dfef7aea14c8b47dae4c5f0b';
+
+const uploadToImgBB = async (file) => {
+    try {
+        // Step 1: Compress locally first to be fast
+        const compressedBase64 = await compressImage(file);
+        // Remove the data:image/jpeg;base64, prefix for ImgBB
+        const base64Data = compressedBase64.split(',')[1];
+
+        const formData = new FormData();
+        formData.append('image', base64Data);
+
+        const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            return result.data.url;
+        } else {
+            throw new Error(result.error.message || "Erreur ImgBB");
+        }
+    } catch (e) {
+        console.error("ImgBB Upload Error:", e);
+        throw new Error("Échec de l'hébergement de l'image. Vérifiez votre connexion.");
+    }
+};
+
 window.saveProduct = async function () {
     const nameInp = document.getElementById('p-name');
     const priceInp = document.getElementById('p-price');
@@ -403,15 +433,14 @@ window.saveProduct = async function () {
 
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Compression...';
+        btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Envoi image...';
     }
 
     try {
         let imageUrl = image || 'img/oli_logo.png';
 
-        // Use compression instead of Firebase Storage
         if (file) {
-            imageUrl = await compressImage(file);
+            imageUrl = await uploadToImgBB(file);
         }
 
         const productObj = {
@@ -427,7 +456,7 @@ window.saveProduct = async function () {
         await renderAdminTables();
     } catch (e) {
         console.error("Save Error:", e);
-        alert("🚨 Échec : " + e.message);
+        alert("🚨 Erreur : " + e.message);
     } finally {
         if (btn) {
             btn.disabled = false;
@@ -462,7 +491,7 @@ window.saveBlogPost = async function () {
     try {
         let img = url || 'img/oli_logo.png';
         if (file) {
-            img = await compressImage(file);
+            img = await uploadToImgBB(file);
         }
         const postObj = { title, tag, desc, image: img, date: new Date().toLocaleDateString('fr-FR') };
         if (id) await window.dataService.updateBlogPost(id, postObj);
