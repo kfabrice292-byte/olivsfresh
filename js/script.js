@@ -1,5 +1,5 @@
-// Oliv's Fresh - Script v1.3 (Strict Firebase Only)
-console.log("🚀 Oliv's Fresh Script v1.3 Loaded");
+// Oliv's Fresh - Script v1.6 (Focal Zoom Edition)
+console.log("🚀 Oliv's Fresh Script v1.6 Loaded");
 
 // --- HELPERS ---
 window.formatPrice = (p) => {
@@ -244,17 +244,17 @@ window.showProductsSkeleton = function (container, count = 4) {
     `).join('');
 };
 
-window.renderProducts = function (container, category, limit = null, searchTerm = '') {
+window.renderProducts = (container, category = 'all', limit = null, searchTerm = '') => {
     if (!container) return;
 
-    let list = category === 'all'
-        ? window.products
-        : window.products.filter(p => p.category === category);
+    let list = window.products || [];
+    if (category !== 'all') {
+        list = list.filter(p => p.category === category);
+    }
 
     // Filter out inactive products
     list = list.filter(p => p.active !== false);
 
-    // Apply search filter if present (Defensive check for non-string properties)
     if (searchTerm) {
         const term = searchTerm.toLowerCase().trim();
         list = list.filter(p => {
@@ -265,7 +265,7 @@ window.renderProducts = function (container, category, limit = null, searchTerm 
         });
     }
 
-    if (limit && limit > 0 && !searchTerm) list = list.slice(0, limit);
+    if (limit) list = list.slice(0, limit);
 
     if (list.length === 0) {
         container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#888;">
@@ -275,14 +275,20 @@ window.renderProducts = function (container, category, limit = null, searchTerm 
         return;
     }
 
-    container.innerHTML = ''; // Clear after check
-    list.forEach((p, idx) => {
+    container.innerHTML = '';
+
+    // For Infinite Scroll (Marquee), we clone the list to make it seamless
+    let displayList = list;
+    if (container.id === 'featured-products-container') {
+        // Double or Triple the list for a seamless loop
+        displayList = [...list, ...list, ...list];
+    }
+
+    displayList.forEach((p, idx) => {
         const div = document.createElement('div');
         div.className = 'product-card';
-        // Add AOS only if not limited (to avoid weirdness in small lists) or tune delay
         div.setAttribute('data-aos', 'fade-up');
-        // Smoother serial delay for a "fluid" appearance
-        div.setAttribute('data-aos-delay', idx * 100);
+        div.setAttribute('data-aos-delay', (idx % list.length) * 100);
 
         // Use a placeholder if image fails
         const imgUrl = p.image || 'img/oli_logo.png';
@@ -319,6 +325,29 @@ window.renderProducts = function (container, category, limit = null, searchTerm 
         `;
         container.appendChild(div);
     });
+
+    // Update Dots Slider if this is the featured container
+    if (container.id === 'featured-products-container') {
+        const dotsCont = document.getElementById('featured-dots');
+        if (dotsCont) {
+            dotsCont.innerHTML = list.map((_, i) => `<div class="dot ${i === 0 ? 'active' : ''}" onclick="window.scrollToItem(${i})"></div>`).join('');
+        }
+    }
+};
+
+window.slideFeatured = function (dir) {
+    const scroller = document.querySelector('.featured-scroll-container');
+    if (!scroller) return;
+    const scrollAmount = scroller.clientWidth * 0.8;
+    scroller.scrollBy({ left: dir * scrollAmount, behavior: 'smooth' });
+};
+
+window.scrollToItem = function (index) {
+    const scroller = document.querySelector('.featured-scroll-container');
+    const items = scroller.querySelectorAll('.product-card');
+    if (items[index]) {
+        items[index].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
 };
 
 window.renderAntiGaspi = function (container) {
@@ -631,14 +660,65 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     setTimeout(removeLoader, 1000);
 
+    // 13. Focal Zoom Animation for Marquee
+    const initFocalZoom = () => {
+        const marquee = document.getElementById('featured-products-container');
+        if (!marquee) return;
+
+        const updateFocal = () => {
+            const cards = marquee.querySelectorAll('.product-card');
+            const viewportCenter = window.innerWidth / 2;
+
+            cards.forEach(card => {
+                const rect = card.getBoundingClientRect();
+                const cardCenter = rect.left + rect.width / 2;
+
+                // Calculate distance from center (0 = perfectly centered)
+                const distance = Math.abs(viewportCenter - cardCenter);
+
+                // Threshold: how wide the "zoom zone" is
+                const maxDistance = window.innerWidth / 2.5;
+
+                if (distance < maxDistance) {
+                    // Power curve: scales from 1.0 at edge of zone to 1.25 at center
+                    const power = 1 - (distance / maxDistance);
+                    const scale = 1 + (power * 0.25);
+                    card.style.transform = `scale(${scale})`;
+                    card.style.filter = `brightness(${1 + (power * 0.1)})`;
+                    card.style.boxShadow = `0 ${10 + (power * 20)}px ${25 + (power * 20)}px rgba(0,0,0,${0.1 + (power * 0.15)})`;
+                } else {
+                    card.style.transform = `scale(1)`;
+                    card.style.filter = `brightness(1)`;
+                    card.style.boxShadow = `var(--shadow-sm)`;
+                }
+            });
+            requestAnimationFrame(updateFocal);
+        };
+        requestAnimationFrame(updateFocal);
+    };
+
     // 13. AOS
     if (typeof AOS !== 'undefined') AOS.init({ duration: 800, once: true });
 
-    // 14. Mobile VH Fix (Anti-jump)
-    const setVh = () => {
-        let vh = window.innerHeight * 0.01;
-        document.documentElement.style.setProperty('--vh', `${vh}px`);
-    };
-    setVh();
-    window.addEventListener('resize', setVh);
+    // Start Focal Zoom
+    initFocalZoom();
+
+    // 15. Dots Sync on Scroll
+    const featuredScroll = document.querySelector('.featured-scroll-container');
+    if (featuredScroll) {
+        featuredScroll.onscroll = () => {
+            const index = Math.round(featuredScroll.scrollLeft / (featuredScroll.clientWidth * 0.8));
+            document.querySelectorAll('.dot').forEach((d, i) => {
+                d.classList.toggle('active', i === index);
+            });
+        };
+    }
 });
+
+// 14. Mobile VH Fix (Anti-jump)
+const setVh = () => {
+    let vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+};
+setVh();
+window.addEventListener('resize', setVh);

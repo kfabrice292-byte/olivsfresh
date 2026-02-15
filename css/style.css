@@ -603,49 +603,75 @@ img {
     gap: 2rem;
 }
 
-/* Featured Scroller - "Fluide" Layout */
-.featured-scroll-container {
-    width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 20px 0;
-    margin: -20px 0;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    /* Firefox */
+/* Premium Infinite Marquee with Center Pulse */
+.featured-slider-wrapper {
+    position: relative;
+    padding: 60px 0;
+    /* More padding for scaling */
+    overflow: hidden;
+    background: rgba(45, 106, 79, 0.02);
+    border-radius: var(--radius-lg);
+    perspective: 1200px;
+    /* For potential 3D feel */
 }
 
-.featured-scroll-container::-webkit-scrollbar {
-    display: none;
-    /* Chrome/Safari */
+.featured-scroll-container {
+    width: 100%;
+    overflow: visible;
+    /* Allow products to enlarge beyond boundaries */
+    padding: 20px 0;
 }
 
 .featured-products-grid {
     display: flex;
-    gap: 2rem;
-    padding-bottom: 20px;
+    gap: 60px;
+    /* Wider gap for focal impact */
+    width: max-content;
+    animation: infiniteScroll 50s linear infinite;
+    align-items: center;
 }
 
-/* On desktop, keep them centered or in a row */
-@media (min-width: 1024px) {
+/* Pause on hover to allow clicking */
+.featured-slider-wrapper:hover .featured-products-grid {
+    animation-play-state: paused;
+}
+
+@keyframes infiniteScroll {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(calc(-50% - 30px));
+    }
+}
+
+.featured-products-grid .product-card {
+    flex: 0 0 320px;
+    transition: transform 0.1s linear, box-shadow 0.3s ease;
+    /* Snappy scale, smooth shadow */
+    transform-origin: center center;
+    will-change: transform;
+}
+
+.featured-products-grid .product-card:hover {
+    z-index: 100;
+}
+
+/* Hide navigation dots and arrows for marquee mode */
+.slider-nav,
+.slider-dots {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
     .featured-products-grid {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 1.5rem;
+        animation-duration: 30s;
+        /* Faster on small screens to feel alive */
     }
-}
 
-@media (max-width: 1023px) {
     .featured-products-grid .product-card {
-        flex: 0 0 280px;
-        scroll-snap-align: center;
-    }
-
-    .featured-scroll-container {
-        scroll-snap-type: x mandatory;
-        padding-left: 5%;
-        padding-right: 5%;
+        flex: 0 0 260px;
     }
 }
 
