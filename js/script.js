@@ -471,7 +471,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 2. Show Skeletons UI while loading
     if (prodCont) window.showProductsSkeleton(prodCont, 8);
-    if (featuredCont) window.showProductsSkeleton(featuredCont, 4);
+    if (featuredCont) window.showProductsSkeleton(featuredCont, 5);
 
     // 3. Sync with Firebase
     await window.initializeData();
@@ -483,7 +483,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Home Page
         if (featuredCont) {
-            const featuredList = window.products.filter(p => !p.tag || p.tag.toUpperCase() !== 'ANTI-GASPI').slice(0, 4);
+            const featuredList = window.products.slice(0, 5);
             const originalProducts = window.products;
             window.products = featuredList;
             window.renderProducts(featuredCont, 'all');
