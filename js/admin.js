@@ -569,7 +569,7 @@ window.migrateLocalData = async function () {
 };
 
 window.sanitizeDatabase = async function () {
-    if (!confirm("⚠️ Action irréversible : Tous les produits corrompus seront supprimés et les DOUBLONS fusionnés. Continuer ?")) return;
+    if (!confirm("⚠️ Action irréversible : Tous les produits corrompus seront supprimés, les DOUBLONS fusionnés et les ANCIENNES DONNÉES DE TEST effacées définitivement. Continuer ?")) return;
 
     const btn = window.event ? window.event.currentTarget : null;
     const original = btn ? btn.innerHTML : '';
@@ -580,14 +580,26 @@ window.sanitizeDatabase = async function () {
 
     try {
         const pList = await window.firebaseService.getProducts();
+        const bList = await window.firebaseService.getBlogPosts();
+
         let deletedGhost = 0;
         let deletedDup = 0;
+        let deletedLegacy = 0;
         let fixed = 0;
 
-        const seenNames = new Map(); // name -> latest product object
+        const seenNames = new Map();
 
-        // Pass 1: Identification of ghosts and valid duplicates
+        // 1. Clean Products
         for (const p of pList) {
+            // Check for legacy IDs (f1, l2, fi1, sub1, etc.)
+            const isLegacyId = p.id && /^(f|l|e|t|tr|fi|sub)\d+$/.test(p.id);
+
+            if (isLegacyId) {
+                await window.firebaseService.deleteProduct(p.id);
+                deletedLegacy++;
+                continue;
+            }
+
             if (!p || !p.name || typeof p.name !== 'string' || p.name.trim() === "") {
                 await window.firebaseService.deleteProduct(p.id);
                 deletedGhost++;
@@ -600,31 +612,36 @@ window.sanitizeDatabase = async function () {
             if (!existing) {
                 seenNames.set(cleanName, p);
             } else {
-                // Keep the one with the latest updatedAt or the longest updatedAt string
                 const existingDate = existing.updatedAt || "";
                 const currentDate = p.updatedAt || "";
-
                 if (currentDate > existingDate) {
-                    // Current is newer, delete the old one
                     await window.firebaseService.deleteProduct(existing.id);
                     seenNames.set(cleanName, p);
                     deletedDup++;
                 } else {
-                    // Existing is newer or same, delete current
                     await window.firebaseService.deleteProduct(p.id);
                     deletedDup++;
                 }
             }
         }
 
-        // Pass 2: Final formatting of survivors
+        // 2. Clean Blog Posts (Legacy b1, b2, b3)
+        for (const b of bList) {
+            const isLegacyBlogId = b.id && /^b\d+$/.test(b.id);
+            if (isLegacyBlogId) {
+                await window.firebaseService.deleteBlogPost(b.id);
+                deletedLegacy++;
+            }
+        }
+
+        // 3. Final format of survivors
         for (const [name, p] of seenNames) {
             const cleanData = prepareProductData(p);
             await window.firebaseService.updateProduct(p.id, cleanData);
             fixed++;
         }
 
-        alert(`✅ Nettoyage terminé !\n- Produits corrompus supprimés : ${deletedGhost}\n- Doublons supprimés : ${deletedDup}\n- Produits sains restants : ${fixed}`);
+        alert(`✅ Nettoyage terminé !\n- Données de test supprimées : ${deletedLegacy}\n- Produits corrompus supprimés : ${deletedGhost}\n- Doublons fusionnés : ${deletedDup}\n- Produits sains restants : ${fixed}`);
         location.reload();
     } catch (e) {
         console.error("Sanitize Error:", e);
