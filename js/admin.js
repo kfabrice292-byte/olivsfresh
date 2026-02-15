@@ -247,6 +247,22 @@ window.exportDataToJSON = function () {
     URL.revokeObjectURL(url);
 };
 
+// --- SCHEMA ENFORCEMENT ---
+function prepareProductData(raw) {
+    return {
+        name: String(raw.name || "").trim(),
+        category: String(raw.category || "fruit"),
+        price: Number(raw.price) || 0,
+        oldPrice: (raw.oldPrice && !isNaN(raw.oldPrice)) ? Number(raw.oldPrice) : null,
+        tag: String(raw.tag || "").trim(),
+        antiGaspiReason: String(raw.antiGaspiReason || "").trim(),
+        unit: String(raw.unit || "kg"),
+        image: String(raw.image || "img/oli_logo.png"),
+        active: raw.active !== false, // defaults to true
+        updatedAt: new Date().toISOString()
+    };
+}
+
 // --- CRUD & OTHERS (Existing updated) ---
 window.switchTab = function (tab) {
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
@@ -258,25 +274,43 @@ window.switchTab = function (tab) {
 };
 
 window.quickUpdate = async function (id) {
-    const price = parseInt(document.getElementById(`price-${id}`).value);
-    const unit = document.getElementById(`unit-${id}`).value;
+    const priceInp = document.getElementById(`price-${id}`);
+    const unitInp = document.getElementById(`unit-${id}`);
+    const price = parseInt(priceInp.value);
+    const unit = unitInp.value;
+
     if (isNaN(price)) return alert("Prix invalide");
 
     const btn = window.event ? window.event.currentTarget : null;
+    const originalContent = btn ? btn.innerHTML : '';
     if (btn) btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i>';
 
     try {
-        await window.dataService.updateProduct(id, { price, unit });
+        const existing = window.products.find(p => p.id === id);
+        if (!existing) throw new Error("Produit non trouvé");
+
+        // Merge and enforce schema
+        const productObj = prepareProductData({ ...existing, price, unit });
+
+        await window.dataService.updateProduct(id, productObj);
         await renderAdminTables();
-        if (window.showToast) window.showToast("Mise à jour réussie !");
+
+        if (window.showToast) window.showToast("⚡ Mise à jour réussie !");
     } catch (e) {
+        console.error("QuickUpdate Error:", e);
         alert("Erreur: " + e.message);
+    } finally {
+        if (btn) btn.innerHTML = originalContent;
     }
 };
 
 window.toggleProductStatus = async function (id, currentStatus) {
     try {
-        await window.dataService.updateProduct(id, { active: !currentStatus });
+        const existing = window.products.find(p => p.id === id);
+        if (!existing) return;
+
+        const productObj = prepareProductData({ ...existing, active: !currentStatus });
+        await window.dataService.updateProduct(id, productObj);
         await renderAdminTables();
     } catch (e) { alert(e.message); }
 };
@@ -443,10 +477,10 @@ window.saveProduct = async function () {
             imageUrl = await uploadToImgBB(file);
         }
 
-        const productObj = {
+        const productObj = prepareProductData({
             name, category, price, oldPrice, tag, antiGaspiReason, unit,
-            image: imageUrl, active: true, updatedAt: new Date().toISOString()
-        };
+            image: imageUrl, active: true
+        });
 
         if (id) await window.dataService.updateProduct(id, productObj);
         else await window.dataService.addProduct(productObj);
@@ -486,21 +520,39 @@ window.saveBlogPost = async function () {
 
     const btn = document.querySelector('#blog-modal .btn-admin:not([style*="background"])');
     const originalText = btn ? btn.textContent : "Enregistrer";
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i>...'; }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Envoi...';
+    }
 
     try {
         let img = url || 'img/oli_logo.png';
         if (file) {
             img = await uploadToImgBB(file);
         }
-        const postObj = { title, tag, desc, image: img, date: new Date().toLocaleDateString('fr-FR') };
+
+        const postObj = {
+            title, tag, desc, image: img,
+            date: new Date().toLocaleDateString('fr-FR'),
+            updatedAt: new Date().toISOString()
+        };
+
         if (id) await window.dataService.updateBlogPost(id, postObj);
         else await window.dataService.addBlogPost(postObj);
 
+        if (window.showToast) window.showToast("✅ Article enregistré !");
         closeModals();
-        renderAdminTables();
-    } catch (e) { alert(e.message); }
-    finally { if (btn) { btn.disabled = false; btn.textContent = originalText; } }
+        await renderAdminTables();
+    } catch (e) {
+        console.error("Blog Save Error:", e);
+        alert("Erreur: " + e.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    }
 };
 
 window.migrateLocalData = async function () {
@@ -508,7 +560,8 @@ window.migrateLocalData = async function () {
     try {
         for (const p of PRODUCTS_DATA) {
             const { id, ...data } = p;
-            await window.firebaseService.addProduct({ ...data, active: true });
+            const productObj = prepareProductData({ ...data, active: true });
+            await window.firebaseService.addProduct(productObj);
         }
         alert("Migration terminée !");
         location.reload();

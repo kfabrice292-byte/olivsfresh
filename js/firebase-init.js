@@ -81,7 +81,7 @@ window.firebaseService = {
     async updateBlogPost(id, post) {
         console.log("📝 Mise à jour article:", id);
         const { id: _, ...data } = post;
-        return await db.collection("blog").doc(id).update(data);
+        return await db.collection("blog").doc(id).set(data, { merge: true });
     }
 };
 
