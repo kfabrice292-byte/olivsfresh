@@ -166,8 +166,8 @@ const BLOG_DATA = [
 ];
 
 // --- APP STATE ---
-window.products = [...PRODUCTS_DATA]; // Start with local data
-window.blogPosts = [...BLOG_DATA];
+window.products = []; // Start empty to ensure no old data shows up
+window.blogPosts = [];
 window.cart = JSON.parse(localStorage.getItem('olivs_cart')) || [];
 
 // --- DATA INITIALIZATION (FIREBASE SYNC) ---
@@ -190,32 +190,19 @@ window.initializeData = async function () {
             console.warn("Could not load Firebase blog posts:", err);
         }
 
-        // If we have products in Firebase, they override or extend the local ones
-        if (Array.isArray(fbProducts) && fbProducts.length > 0) {
-            // Filter out invalid/corrupt products (missing name)
-            const validFbProducts = fbProducts.filter(p => {
-                if (!p || !p.name || typeof p.name !== 'string') {
-                    console.warn("⚠️ Produit Firebase invalide détecté (champ 'name' manquant ou incorrect). ID:", p?.id, "Contenu:", p);
-                    return false;
-                }
+        // Use Firebase data exclusively
+        if (Array.isArray(fbProducts)) {
+            window.products = fbProducts.filter(p => {
+                if (!p || !p.name) return false;
                 return true;
             });
-
-            // Combine and remove duplicates by name (prefer Firebase version)
-            const firebaseNames = new Set(validFbProducts.map(p => p.name.toLowerCase()));
-            const filteredLocal = PRODUCTS_DATA.filter(p =>
-                p && p.name && typeof p.name === 'string' && !firebaseNames.has(p.name.toLowerCase())
-            );
-            window.products = [...validFbProducts, ...filteredLocal];
         }
 
-        if (Array.isArray(fbBlog) && fbBlog.length > 0) {
-            // Filter out invalid blog posts too
-            const validBlog = fbBlog.filter(b => b && b.title && typeof b.title === 'string');
-            if (validBlog.length > 0) {
-                window.blogPosts = validBlog;
-            }
+        if (Array.isArray(fbBlog)) {
+            window.blogPosts = fbBlog.filter(b => b && b.title);
         }
+
+
     } catch (e) {
         console.error("Data Sync Error:", e);
     }
