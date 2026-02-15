@@ -21,72 +21,67 @@ window.firebaseService = {
     storage: storage,
 
     async uploadFile(file, path) {
-        return new Promise((resolve, reject) => {
-            if (!storage) return reject(new Error("Firebase Storage not initialized"));
+        console.log("📤 Tentative d'upload vers:", path);
+        if (!storage) {
+            console.error("❌ Firebase Storage n'est pas initialisé !");
+            throw new Error("Service de stockage indisponible.");
+        }
 
+        try {
             const ref = storage.ref().child(path);
-            const uploadTask = ref.put(file);
-
-            console.log(`Starting upload: ${path}`);
-
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    console.log('Upload is ' + Math.round(progress) + '% done');
-                },
-                (error) => {
-                    console.error("Storage Error during upload:", error);
-                    reject(error);
-                },
-                async () => {
-                    try {
-                        const url = await uploadTask.snapshot.ref.getDownloadURL();
-                        console.log("Upload successful, URL:", url);
-                        resolve(url);
-                    } catch (e) {
-                        reject(e);
-                    }
-                }
-            );
-        });
+            const snapshot = await ref.put(file);
+            console.log("✅ Upload terminé avec succès");
+            const url = await snapshot.ref.getDownloadURL();
+            console.log("🔗 URL générée:", url);
+            return url;
+        } catch (e) {
+            console.error("❌ Erreur de stockage Firebase:", e);
+            throw new Error("Impossible d'envoyer l'image : " + e.message);
+        }
     },
 
     async getProducts() {
+        console.log("📡 Récupération des produits...");
         const snapshot = await db.collection("products").get();
-        if (snapshot.empty) return [];
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     },
 
     async addProduct(product) {
+        console.log("➕ Ajout produit:", product.name);
         return await db.collection("products").add(product);
     },
 
     async deleteProduct(id) {
-        await db.collection("products").doc(id).delete();
+        console.log("🗑️ Suppression produit:", id);
+        return await db.collection("products").doc(id).delete();
     },
 
     async updateProduct(id, product) {
+        console.log("📝 Mise à jour produit:", id);
         const { id: _, ...data } = product;
-        await db.collection("products").doc(id).set(data, { merge: true });
+        return await db.collection("products").doc(id).set(data, { merge: true });
     },
 
     async getBlogPosts() {
+        console.log("📡 Récupération du blog...");
         const snapshot = await db.collection("blog").get();
-        if (snapshot.empty) return [];
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     },
 
     async addBlogPost(post) {
+        console.log("➕ Ajout article:", post.title);
         return await db.collection("blog").add(post);
     },
 
     async deleteBlogPost(id) {
-        await db.collection("blog").doc(id).delete();
+        console.log("🗑️ Suppression article:", id);
+        return await db.collection("blog").doc(id).delete();
     },
 
     async updateBlogPost(id, post) {
+        console.log("📝 Mise à jour article:", id);
         const { id: _, ...data } = post;
-        await db.collection("blog").doc(id).update(data);
+        return await db.collection("blog").doc(id).update(data);
     }
 };
 

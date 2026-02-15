@@ -142,31 +142,9 @@ function renderProductRows(list) {
 
 // --- STATS LOGIC ---
 function updateStats() {
-    const total = window.products.length;
-    const inactive = window.products.filter(p => p.active === false).length;
-    const blog = window.blogPosts.length;
-
-    document.getElementById('stat-total-products').textContent = total;
-    document.getElementById('stat-inactive-products').textContent = inactive;
-    document.getElementById('stat-total-blog').textContent = blog;
-}
-
-// --- SEARCH & FILTER ---
-window.filterAdminProducts = function () {
-    const term = document.getElementById('product-search').value.toLowerCase();
-    const filtered = window.products.filter(p =>
-        p.name.toLowerCase().includes(term) ||
-        p.category.toLowerCase().includes(term) ||
-        (p.tag && p.tag.toLowerCase().includes(term))
-    );
-    renderProductRows(filtered);
-};
-
-// --- STATS LOGIC ---
-function updateStats() {
     if (!window.products) return;
     const total = window.products.length;
-    const inactive = window.products.filter(p => p.active === false).length;
+    const inactive = window.products.filter(p => !p.active || p.active === false).length;
     const blog = window.blogPosts ? window.blogPosts.length : 0;
 
     const elTotal = document.getElementById('stat-total-products');
@@ -237,7 +215,7 @@ window.openWhatsAppModal = function () {
 
     message += `--- \n`;
     message += `🛵 *Livraison rapide sur Ouagadougou !*\n`;
-    message += `� *Commander ici :* wa.me/22677973958\n`;
+    message += ` *Commander ici :* wa.me/22677973958\n`;
     message += `✨ _Oliv's Fresh : Le champ dans votre cuisine._`;
 
     document.getElementById('wa-preview').innerText = message;
@@ -379,9 +357,11 @@ function resetBlogForm() {
 }
 
 window.saveProduct = async function () {
-    const name = document.getElementById('p-name').value;
+    const nameInp = document.getElementById('p-name');
+    const priceInp = document.getElementById('p-price');
+    const name = nameInp.value;
     const category = document.getElementById('p-category').value;
-    const price = parseInt(document.getElementById('p-price').value);
+    const price = parseInt(priceInp.value);
     const oldPrice = parseInt(document.getElementById('p-old-price').value) || null;
     const tag = document.getElementById('p-tag').value;
     const antiGaspiReason = document.getElementById('p-anti-gaspi-reason').value;
@@ -393,10 +373,7 @@ window.saveProduct = async function () {
 
     if (!name || isNaN(price)) return alert("Nom et Prix requis");
 
-    // Robust button selector
-    const btn = document.querySelector('#product-modal .btn-admin:not([style*="background"])') ||
-        (window.event ? window.event.currentTarget : null);
-
+    const btn = document.querySelector('#product-modal .btn-admin:not([style*="background"])');
     const originalText = btn ? btn.textContent : "Enregistrer";
 
     if (btn) {
@@ -404,43 +381,40 @@ window.saveProduct = async function () {
         btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Traitement...';
     }
 
+    // Protection anti-blocage (timeout 15s)
+    const timeout = setTimeout(() => {
+        if (btn && btn.disabled) {
+            btn.disabled = false;
+            btn.textContent = originalText;
+            alert("⏳ Le délai d'attente a été dépassé. Vérifiez votre connexion.");
+        }
+    }, 15000);
+
     try {
         let imageUrl = image || 'img/oli_logo.png';
 
         if (file) {
-            // Check size (max 5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                throw new Error("L'image est trop lourde (max 5 Mo)");
-            }
+            if (file.size > 5 * 1024 * 1024) throw new Error("Image trop lourde (max 5 Mo)");
             const path = `products/${Date.now()}_${file.name}`;
             imageUrl = await window.firebaseService.uploadFile(file, path);
         }
 
         const productObj = {
-            name,
-            category,
-            price,
-            oldPrice,
-            tag,
-            antiGaspiReason,
-            unit,
-            image: imageUrl,
-            active: true,
-            updatedAt: new Date().toISOString()
+            name, category, price, oldPrice, tag, antiGaspiReason, unit,
+            image: imageUrl, active: true, updatedAt: new Date().toISOString()
         };
 
-        if (id) {
-            await window.dataService.updateProduct(id, productObj);
-        } else {
-            await window.dataService.addProduct(productObj);
-        }
+        if (id) await window.dataService.updateProduct(id, productObj);
+        else await window.dataService.addProduct(productObj);
 
-        if (window.showToast) window.showToast("✅ Produit enregistré avec succès !");
+        clearTimeout(timeout);
+        if (window.showToast) window.showToast("✅ Succès !");
         closeModals();
         await renderAdminTables();
     } catch (e) {
+        clearTimeout(timeout);
         console.error("Save Error:", e);
-        alert("Erreur lors de l'enregistrement : " + e.message);
+        alert("🚨 Échec : " + e.message);
     } finally {
         if (btn) {
             btn.disabled = false;
