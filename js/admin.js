@@ -347,14 +347,39 @@ function resetProductForm() {
     document.getElementById('p-file').value = '';
 }
 
-function resetBlogForm() {
-    document.getElementById('b-id').value = '';
-    document.getElementById('b-title').value = '';
-    document.getElementById('b-tag').value = '';
-    document.getElementById('b-desc').value = '';
-    document.getElementById('b-image').value = '';
-    document.getElementById('b-file').value = '';
-}
+// --- IMAGE COMPRESSION (FREE ALTERNATIVE TO STORAGE) ---
+const compressImage = (file, maxWidth = 600, quality = 0.6) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (e) => {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Convert to compressed JPG string
+                const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                console.log("Image compressée avec succès. Taille :", Math.round(compressedBase64.length / 1024), "KB");
+                resolve(compressedBase64);
+            };
+            img.onerror = reject;
+        };
+        reader.onerror = reject;
+    });
+};
 
 window.saveProduct = async function () {
     const nameInp = document.getElementById('p-name');
@@ -378,25 +403,15 @@ window.saveProduct = async function () {
 
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Traitement...';
+        btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Compression...';
     }
-
-    // Protection anti-blocage (timeout 15s)
-    const timeout = setTimeout(() => {
-        if (btn && btn.disabled) {
-            btn.disabled = false;
-            btn.textContent = originalText;
-            alert("⏳ Le délai d'attente a été dépassé. Vérifiez votre connexion.");
-        }
-    }, 15000);
 
     try {
         let imageUrl = image || 'img/oli_logo.png';
 
+        // Use compression instead of Firebase Storage
         if (file) {
-            if (file.size > 5 * 1024 * 1024) throw new Error("Image trop lourde (max 5 Mo)");
-            const path = `products/${Date.now()}_${file.name}`;
-            imageUrl = await window.firebaseService.uploadFile(file, path);
+            imageUrl = await compressImage(file);
         }
 
         const productObj = {
@@ -407,12 +422,10 @@ window.saveProduct = async function () {
         if (id) await window.dataService.updateProduct(id, productObj);
         else await window.dataService.addProduct(productObj);
 
-        clearTimeout(timeout);
-        if (window.showToast) window.showToast("✅ Succès !");
+        if (window.showToast) window.showToast("✅ Produit enregistré !");
         closeModals();
         await renderAdminTables();
     } catch (e) {
-        clearTimeout(timeout);
         console.error("Save Error:", e);
         alert("🚨 Échec : " + e.message);
     } finally {
@@ -422,6 +435,15 @@ window.saveProduct = async function () {
         }
     }
 };
+
+function resetBlogForm() {
+    document.getElementById('b-id').value = '';
+    document.getElementById('b-title').value = '';
+    document.getElementById('b-tag').value = '';
+    document.getElementById('b-desc').value = '';
+    document.getElementById('b-image').value = '';
+    document.getElementById('b-file').value = '';
+}
 
 window.saveBlogPost = async function () {
     const title = document.getElementById('b-title').value;
@@ -433,14 +455,14 @@ window.saveBlogPost = async function () {
 
     if (!title) return alert("Titre requis");
 
-    const btn = window.event ? window.event.target : null;
-    if (btn) { btn.disabled = true; btn.textContent = "..."; }
+    const btn = document.querySelector('#blog-modal .btn-admin:not([style*="background"])');
+    const originalText = btn ? btn.textContent : "Enregistrer";
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i>...'; }
 
     try {
         let img = url || 'img/oli_logo.png';
         if (file) {
-            const path = `blog/${Date.now()}_${file.name}`;
-            img = await window.firebaseService.uploadFile(file, path);
+            img = await compressImage(file);
         }
         const postObj = { title, tag, desc, image: img, date: new Date().toLocaleDateString('fr-FR') };
         if (id) await window.dataService.updateBlogPost(id, postObj);
@@ -449,7 +471,7 @@ window.saveBlogPost = async function () {
         closeModals();
         renderAdminTables();
     } catch (e) { alert(e.message); }
-    finally { if (btn) { btn.disabled = false; btn.textContent = "Enregistrer"; } }
+    finally { if (btn) { btn.disabled = false; btn.textContent = originalText; } }
 };
 
 window.migrateLocalData = async function () {
