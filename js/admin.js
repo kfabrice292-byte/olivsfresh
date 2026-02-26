@@ -60,6 +60,55 @@ async function renderAdminTables() {
     await window.initializeData();
     updateStats();
 
+    // Auto-save defaults to Firestore if empty and user is logged in
+    if (window.subscriptions.length === 0 && window.firebaseService.auth.currentUser) {
+        const defaults = [
+            { id: 'sub_petit', title: 'Le Petit Panier', subtitle: 'Idéal pour 1 à 2 personnes', price: 7500, unit: '/semaine', features: ['3-4 kg de fruits & légumes', '5 variétés de saison', 'Fiche recette incluse', 'Sans engagement'], waText: "Je souhaite m'abonner au Petit Panier" },
+            { id: 'sub_famille', title: 'Le Panier Famille', subtitle: 'Idéal pour 3 à 5 personnes', price: 12500, unit: '/semaine', features: ['6-8 kg de fruits & légumes', '8-10 variétés de saison', 'Œufs frais offerts (x6)', 'Sans engagement'], waText: "Je souhaite m'abonner au Panier Famille" },
+            { id: 'sub_bureau', title: 'Le Panier Bureau', subtitle: 'Pour vos collaborateurs', price: 15000, unit: '/semaine', features: ['10 kg de fruits de saison', 'Prêt à consommer', 'Booster d\'énergie', 'Livraison entreprise'], waText: "Je souhaite plus d'infos sur le Panier Bureau" }
+        ];
+        for (const s of defaults) await window.firebaseService.updateSubscription(s.id, s);
+        window.subscriptions = defaults;
+    }
+
+    if (window.deliveryInfo.length === 0 && window.firebaseService.auth.currentUser) {
+        const defaults = [
+            { id: 'del_relay_1', type: 'relay', title: 'Relais Ouaga 2000', desc: 'Boulangerie Élite - Mar-Ven 16h-19h', icon: 'ri-store-2-line' },
+            { id: 'del_home', type: 'home', title: 'Livraison à Domicile', desc: 'Directement chez vous sous 24h', icon: 'ri-e-bike-2-line' }
+        ];
+        for (const d of defaults) await window.firebaseService.updateDeliveryInfo(d.id, d);
+        window.deliveryInfo = defaults;
+    }
+
+    const sBody = document.getElementById('subscriptions-table-body');
+    const dBody = document.getElementById('delivery-table-body');
+
+    if (sBody) {
+        sBody.innerHTML = window.subscriptions.map(s => `
+            <tr>
+                <td><b>${s.title}</b></td>
+                <td>${s.subtitle}</td>
+                <td>${window.formatPrice(s.price)}${s.unit}</td>
+                <td>
+                    <button class="action-btn edit-btn" onclick="openSubEdit('${s.id}')"><i class="ri-edit-line"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    if (dBody) {
+        dBody.innerHTML = window.deliveryInfo.map(d => `
+            <tr>
+                <td><span class="badge-status badge-active">${d.type === 'relay' ? 'Relais' : 'Domicile'}</span></td>
+                <td><b>${d.title}</b></td>
+                <td>${d.desc}</td>
+                <td>
+                    <button class="action-btn edit-btn" onclick="openDelEdit('${d.id}')"><i class="ri-edit-line"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
     if (pBody) {
         const validProducts = window.products.filter(p => p && p.name);
         renderProductRows(validProducts);
@@ -93,7 +142,16 @@ function renderProductRows(list) {
         return;
     }
 
-    pBody.innerHTML = list.map(p => `
+    pBody.innerHTML = list.map(p => {
+        let priceDisplay = `<span>${window.formatPrice(p.price)}</span>`;
+        if (p.category === 'juice' && p.price50cl && p.price1L) {
+            priceDisplay = `<div style="font-size:0.8rem; line-height:1.2;">
+                <div>50cl: <b>${window.formatPrice(p.price50cl)}</b></div>
+                <div>1L: <b>${window.formatPrice(p.price1L)}</b></div>
+            </div>`;
+        }
+
+        return `
         <tr>
             <td><input type="checkbox" class="promo-select" value="${p.id}"></td>
             <td><img src="${p.image || 'img/oli_logo.png'}" style="width:50px; height:50px; border-radius:12px; object-fit:cover; border:1px solid #eee;" onerror="this.src='img/oli_logo.png'"></td>
@@ -104,11 +162,11 @@ function renderProductRows(list) {
             <td><span style="font-size:0.85rem; color:#64748b;">${window.getProductTag ? window.getProductTag(p.category) : p.category}</span></td>
             <td>
                 <div style="display:flex; align-items:center; gap:5px;">
-                    <input type="number" value="${p.price || 0}" id="price-${p.id}" style="width:90px; padding:8px; border:1px solid #e2e8f0; border-radius:8px; font-weight:600;">
+                    ${p.category === 'juice' ? priceDisplay : `<input type="number" value="${p.price || 0}" id="price-${p.id}" style="width:90px; padding:8px; border:1px solid #e2e8f0; border-radius:8px; font-weight:600;">`}
                 </div>
             </td>
             <td>
-                <select id="unit-${p.id}" style="padding:8px; border:1px solid #e2e8f0; border-radius:8px; width:90px;">
+                <select id="unit-${p.id}" style="padding:8px; border:1px solid #e2e8f0; border-radius:8px; width:90px;" ${p.category === 'juice' ? 'disabled' : ''}>
                     <option value="kg" ${p.unit === 'kg' ? 'selected' : ''}>kg</option>
                     <option value="unité" ${p.unit === 'unité' ? 'selected' : ''}>unité</option>
                     <option value="botte" ${p.unit === 'botte' ? 'selected' : ''}>botte</option>
@@ -126,9 +184,10 @@ function renderProductRows(list) {
                 </div>
             </td>
             <td style="white-space:nowrap;">
+                ${p.category !== 'juice' ? `
                 <button class="action-btn" title="Sauvegarde Rapide" onclick="quickUpdate('${p.id}')">
                     <i class="ri-save-fill" style="color:var(--primary);"></i>
-                </button>
+                </button>` : ''}
                 <button class="action-btn" title="Modifier" onclick="openProductEdit('${p.id}')">
                     <i class="ri-pencil-line" style="color:#64748b;"></i>
                 </button>
@@ -136,8 +195,8 @@ function renderProductRows(list) {
                     <i class="ri-delete-bin-7-line"></i>
                 </button>
             </td>
-        </tr>
-    `).join('');
+        </tr>`;
+    }).join('');
 }
 
 // --- STATS LOGIC ---
@@ -189,7 +248,9 @@ window.openWhatsAppModal = function () {
         'vegetable': '🥬',
         'aromatic': '🌿',
         'tuber': '🥔',
-        'processed': '🥤',
+        'juice': '🥤',
+        'cut_produce': '🔪',
+        'processed': '✨',
         'subscription': '📦'
     };
 
@@ -249,7 +310,7 @@ window.exportDataToJSON = function () {
 
 // --- SCHEMA ENFORCEMENT ---
 function prepareProductData(raw) {
-    return {
+    const data = {
         name: String(raw.name || "").trim(),
         category: String(raw.category || "fruit"),
         price: Number(raw.price) || 0,
@@ -261,6 +322,15 @@ function prepareProductData(raw) {
         active: raw.active !== false, // defaults to true
         updatedAt: new Date().toISOString()
     };
+
+    if (data.category === 'juice') {
+        data.price50cl = Number(raw.price50cl) || 0;
+        data.price1L = Number(raw.price1L) || 0;
+        data.price = data.price50cl; // default price for sort/filter
+        data.unit = 'format';
+    }
+
+    return data;
 }
 
 // --- CRUD & OTHERS (Existing updated) ---
@@ -346,11 +416,18 @@ window.openProductEdit = function (id) {
     document.getElementById('p-name').value = p.name;
     document.getElementById('p-category').value = p.category;
     document.getElementById('p-price').value = p.price;
+    document.getElementById('p-price-50cl').value = p.price50cl || '';
+    document.getElementById('p-price-1L').value = p.price1L || '';
     document.getElementById('p-old-price').value = p.oldPrice || '';
     document.getElementById('p-tag').value = p.tag || '';
     document.getElementById('p-anti-gaspi-reason').value = p.antiGaspiReason || '';
     document.getElementById('p-unit').value = p.unit;
     document.getElementById('p-image').value = p.image;
+
+    // Trigger category change for dynamic fields
+    const event = new Event('change');
+    document.getElementById('p-category').dispatchEvent(event);
+
     document.getElementById('product-modal').classList.add('active');
 };
 
@@ -374,11 +451,17 @@ function resetProductForm() {
     document.getElementById('p-id').value = '';
     document.getElementById('p-name').value = '';
     document.getElementById('p-price').value = '';
+    document.getElementById('p-price-50cl').value = '';
+    document.getElementById('p-price-1L').value = '';
     document.getElementById('p-old-price').value = '';
     document.getElementById('p-tag').value = '';
     document.getElementById('p-anti-gaspi-reason').value = '';
     document.getElementById('p-image').value = '';
     document.getElementById('p-file').value = '';
+
+    // Trigger category change
+    const event = new Event('change');
+    document.getElementById('p-category').dispatchEvent(event);
 }
 
 // --- IMAGE COMPRESSION (FREE ALTERNATIVE TO STORAGE) ---
@@ -479,7 +562,9 @@ window.saveProduct = async function () {
 
         const productObj = prepareProductData({
             name, category, price, oldPrice, tag, antiGaspiReason, unit,
-            image: imageUrl, active: true
+            image: imageUrl, active: true,
+            price50cl: parseInt(document.getElementById('p-price-50cl').value),
+            price1L: parseInt(document.getElementById('p-price-1L').value)
         });
 
         if (id) await window.dataService.updateProduct(id, productObj);
@@ -652,5 +737,64 @@ window.sanitizeDatabase = async function () {
             btn.innerHTML = original;
         }
     }
+};
+
+// --- SUBSCRIPTIONS & DELIVERY MGMT ---
+window.openSubEdit = function (id) {
+    const s = window.subscriptions.find(x => x.id === id);
+    if (!s) return;
+    document.getElementById('sub-id').value = s.id;
+    document.getElementById('sub-title').value = s.title;
+    document.getElementById('sub-subtitle').value = s.subtitle;
+    document.getElementById('sub-price').value = s.price;
+    document.getElementById('sub-unit').value = s.unit || '/semaine';
+    document.getElementById('sub-features').value = (s.features || []).join('\n');
+    document.getElementById('sub-wa-text').value = s.waText || "";
+    document.getElementById('sub-modal').classList.add('active');
+};
+
+window.saveSubscription = async function () {
+    const id = document.getElementById('sub-id').value;
+    const title = document.getElementById('sub-title').value;
+    const subtitle = document.getElementById('sub-subtitle').value;
+    const price = parseInt(document.getElementById('sub-price').value);
+    const unit = document.getElementById('sub-unit').value;
+    const features = document.getElementById('sub-features').value.split('\n').filter(l => l.trim() !== "");
+    const waText = document.getElementById('sub-wa-text').value;
+
+    if (!title || isNaN(price)) return alert("Titre et Prix requis");
+
+    try {
+        await window.firebaseService.updateSubscription(id, { title, subtitle, price, unit, features, waText });
+        if (window.showToast) window.showToast("✅ Abonnement mis à jour !");
+        closeModals();
+        renderAdminTables();
+    } catch (e) { alert(e.message); }
+};
+
+window.openDelEdit = function (id) {
+    const d = window.deliveryInfo.find(x => x.id === id);
+    if (!d) return;
+    document.getElementById('del-id').value = d.id;
+    document.getElementById('del-title').value = d.title;
+    document.getElementById('del-desc').value = d.desc;
+    document.getElementById('del-icon').value = d.icon;
+    document.getElementById('delivery-modal').classList.add('active');
+};
+
+window.saveDeliveryInfo = async function () {
+    const id = document.getElementById('del-id').value;
+    const title = document.getElementById('del-title').value;
+    const desc = document.getElementById('del-desc').value;
+    const icon = document.getElementById('del-icon').value;
+
+    if (!title) return alert("Titre requis");
+
+    try {
+        await window.firebaseService.updateDeliveryInfo(id, { title, desc, icon });
+        if (window.showToast) window.showToast("✅ Infos de livraison mises à jour !");
+        closeModals();
+        renderAdminTables();
+    } catch (e) { alert(e.message); }
 };
 

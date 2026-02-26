@@ -543,6 +543,12 @@
             <div class="nav-item" onclick="switchTab('blog')">
                 <i class="ri-edit-box-line"></i> <span class="nav-text">Blog</span>
             </div>
+            <div class="nav-item" onclick="switchTab('subscriptions')">
+                <i class="ri-shopping-basket-line"></i> <span class="nav-text">Abonnements</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('delivery')">
+                <i class="ri-truck-line"></i> <span class="nav-text">Livraisons</span>
+            </div>
 
             <div class="nav-group-label">Marketing</div>
             <div class="nav-item" onclick="openWhatsAppModal()">
@@ -648,6 +654,51 @@
                 </div>
             </div>
 
+            <!-- SUBSCRIPTIONS VIEW -->
+            <div id="view-subscriptions" class="tab-view" style="display: none;">
+                <div class="card">
+                    <div class="table-header">
+                        <h3 style="font-weight: 700; color: var(--primary-dark);">Formules d'Abonnement</h3>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Titre</th>
+                                <th>Sous-titre</th>
+                                <th>Prix</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subscriptions-table-body">
+                            <!-- JS Injection -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- DELIVERY VIEW -->
+            <div id="view-delivery" class="tab-view" style="display: none;">
+                <div class="card">
+                    <div class="table-header">
+                        <h3 style="font-weight: 700; color: var(--primary-dark);">Points de Retrait & Zones de Livraison
+                        </h3>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Titre</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="delivery-table-body">
+                            <!-- JS Injection -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- BLOG VIEW -->
             <div id="view-blog" class="tab-view" style="display: none;">
                 <div class="card">
@@ -744,13 +795,26 @@
                     <option value="vegetable">Légumes</option>
                     <option value="aromatic">Épices & Feuilles</option>
                     <option value="tuber">Tubercules</option>
-                    <option value="processed">Jus & Découpés</option>
+                    <option value="juice">Jus</option>
+                    <option value="cut_produce">Fruits & Légumes découpés</option>
+                    <option value="processed">Produits transformés</option>
                     <option value="subscription">Paniers & Abonnements</option>
                 </select>
             </div>
-            <div class="input-group">
+            <div class="input-group standard-price-group">
                 <label>Prix de Vente (FCFA)</label>
                 <input type="number" id="p-price">
+            </div>
+            <!-- Juice specific prices -->
+            <div class="juice-price-group" style="display:none; gap:10px; margin-bottom:1.25rem;">
+                <div style="flex:1;">
+                    <label>Prix 50 cl (FCFA)</label>
+                    <input type="number" id="p-price-50cl">
+                </div>
+                <div style="flex:1;">
+                    <label>Prix 1 L (FCFA)</label>
+                    <input type="number" id="p-price-1L">
+                </div>
             </div>
             <div class="input-group">
                 <label>Ancien Prix / Promo (FCFA - Optionnel)</label>
@@ -820,6 +884,64 @@
         </div>
     </div>
 
+    <!-- Subscription Modal -->
+    <div id="sub-modal" class="admin-modal">
+        <div class="modal-body">
+            <h3>Modifier l'Abonnement</h3>
+            <input type="hidden" id="sub-id">
+            <div class="input-group">
+                <label>Titre</label>
+                <input type="text" id="sub-title">
+            </div>
+            <div class="input-group">
+                <label>Sous-titre</label>
+                <input type="text" id="sub-subtitle">
+            </div>
+            <div class="input-group">
+                <label>Prix (FCFA)</label>
+                <input type="number" id="sub-price">
+            </div>
+            <div class="input-group">
+                <label>Unité (ex: /semaine)</label>
+                <input type="text" id="sub-unit">
+            </div>
+            <div class="input-group">
+                <label>Avantages (un par ligne)</label>
+                <textarea id="sub-features" rows="5"></textarea>
+            </div>
+            <div class="input-group">
+                <label>Texte Bouton WhatsApp</label>
+                <input type="text" id="sub-wa-text">
+            </div>
+            <button class="btn-admin" onclick="saveSubscription()">Enregistrer</button>
+            <button class="btn-admin" onclick="closeModals()"
+                style="background: #999; margin-top: 10px;">Annuler</button>
+        </div>
+    </div>
+
+    <!-- Delivery Modal -->
+    <div id="delivery-modal" class="admin-modal">
+        <div class="modal-body">
+            <h3>Modifier Info Livraison/Relais</h3>
+            <input type="hidden" id="del-id">
+            <div class="input-group">
+                <label>Titre</label>
+                <input type="text" id="del-title">
+            </div>
+            <div class="input-group">
+                <label>Description</label>
+                <textarea id="del-desc" rows="3"></textarea>
+            </div>
+            <div class="input-group">
+                <label>Icône (RemixIcon, ex: ri-store-2-line)</label>
+                <input type="text" id="del-icon">
+            </div>
+            <button class="btn-admin" onclick="saveDeliveryInfo()">Enregistrer</button>
+            <button class="btn-admin" onclick="closeModals()"
+                style="background: #999; margin-top: 10px;">Annuler</button>
+        </div>
+    </div>
+
     <!-- Firebase SDKs (Compat version) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -829,6 +951,19 @@
 
     <script src="js/script.js"></script>
     <script src="js/admin.js"></script>
+
+    <script>
+        // Dynamic fields for Juice
+        if (document.getElementById('p-category')) {
+            document.getElementById('p-category').addEventListener('change', function (e) {
+                const isJuice = e.target.value === 'juice';
+                const juiceGroup = document.querySelector('.juice-price-group');
+                const standardGroup = document.querySelector('.standard-price-group');
+                if (juiceGroup) juiceGroup.style.display = isJuice ? 'flex' : 'none';
+                if (standardGroup) standardGroup.style.display = isJuice ? 'none' : 'block';
+            });
+        }
+    </script>
 </body>
 
 </html>

@@ -13,7 +13,9 @@ window.getProductTag = (cat) => {
         'vegetable': 'Légumes',
         'aromatic': 'Herbes & Épices',
         'tuber': 'Tubercules',
-        'processed': 'Transformés',
+        'juice': 'Jus',
+        'cut_produce': 'Fruits & Légumes découpés',
+        'processed': 'Produits transformés',
         'box': 'Paniers',
         'subscription': 'Abonnements'
     };
@@ -25,8 +27,10 @@ const BLOG_DATA = [];
 
 
 // --- APP STATE ---
-window.products = []; // Start empty to ensure no old data shows up
+window.products = [];
 window.blogPosts = [];
+window.subscriptions = [];
+window.deliveryInfo = [];
 window.cart = JSON.parse(localStorage.getItem('olivs_cart')) || [];
 
 // --- DATA INITIALIZATION (FIREBASE SYNC) ---
@@ -59,6 +63,28 @@ window.initializeData = async function () {
 
         if (Array.isArray(fbBlog)) {
             window.blogPosts = fbBlog.filter(b => b && b.title);
+        }
+
+        try {
+            window.subscriptions = await window.firebaseService.getSubscriptions() || [];
+            window.deliveryInfo = await window.firebaseService.getDeliveryInfo() || [];
+
+            // Default data if empty (Admin only usually, but good for first load)
+            if (window.subscriptions.length === 0) {
+                window.subscriptions = [
+                    { id: 'sub_petit', title: 'Le Petit Panier', subtitle: 'Idéal pour 1 à 2 personnes', price: 7500, unit: '/semaine', features: ['3-4 kg de fruits & légumes', '5 variétés de saison', 'Fiche recette incluse', 'Sans engagement'], waText: "Je souhaite m'abonner au Petit Panier" },
+                    { id: 'sub_famille', title: 'Le Panier Famille', subtitle: 'Idéal pour 3 à 5 personnes', price: 12500, unit: '/semaine', features: ['6-8 kg de fruits & légumes', '8-10 variétés de saison', 'Œufs frais offerts (x6)', 'Sans engagement'], waText: "Je souhaite m'abonner au Panier Famille" },
+                    { id: 'sub_bureau', title: 'Le Panier Bureau', subtitle: 'Pour vos collaborateurs', price: 15000, unit: '/semaine', features: ['10 kg de fruits de saison', 'Prêt à consommer', 'Booster d\'énergie', 'Livraison entreprise'], waText: "Je souhaite plus d'infos sur le Panier Bureau" }
+                ];
+            }
+            if (window.deliveryInfo.length === 0) {
+                window.deliveryInfo = [
+                    { id: 'del_relay_1', type: 'relay', title: 'Relais Ouaga 2000', desc: 'Boulangerie Élite - Mar-Ven 16h-19h', icon: 'ri-store-2-line' },
+                    { id: 'del_home', type: 'home', title: 'Livraison à Domicile', desc: 'Directement chez vous sous 24h', icon: 'ri-e-bike-2-line' }
+                ];
+            }
+        } catch (err) {
+            console.warn("Could not load Subscriptions/Delivery info:", err);
         }
 
 
@@ -110,15 +136,47 @@ window.saveCart = function () {
     window.updateCartUI();
 };
 
+window.selectJuiceFormat = function (id, format, price, btn) {
+    const product = window.products.find(p => p.id === id);
+    if (!product) return;
+
+    product.selectedFormat = format;
+
+    // Update UI
+    const container = btn.parentElement;
+    container.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const priceEl = document.getElementById(`price-display-${id}`);
+    if (priceEl) priceEl.textContent = window.formatPrice(price);
+};
+
+window.addJuiceToCart = function (id, event) {
+    const product = window.products.find(p => p.id === id);
+    if (!product) return;
+
+    if (!product.selectedFormat) {
+        product.selectedFormat = '50cl'; // default
+    }
+
+    window.addToCart(id, event);
+};
+
 window.addToCart = function (id, event) {
     const product = window.products.find(p => p.id === id);
     if (!product) return;
 
-    const existing = window.cart.find(item => item.id === id);
+    const existing = window.cart.find(item => item.id === id && item.format === (product.selectedFormat || null));
     if (existing) {
         existing.qty++;
     } else {
-        window.cart.push({ ...product, qty: 1 });
+        const itemToAdd = { ...product, qty: 1 };
+        if (product.selectedFormat) {
+            itemToAdd.format = product.selectedFormat;
+            itemToAdd.price = product.selectedFormat === '50cl' ? product.price50cl : product.price1L;
+            itemToAdd.name = `${product.name} (${product.selectedFormat})`;
+        }
+        window.cart.push(itemToAdd);
     }
 
     window.saveCart();
@@ -301,6 +359,25 @@ window.renderProducts = (container, category = 'all', limit = null, searchTerm =
         // Anti-gaspi explanation
         const reasonHtml = (isAntiGaspi && p.antiGaspiReason) ? `<div style="background:#fff5f5; color:#d63031; font-size:0.75rem; padding:5px 10px; border-radius:8px; margin-top:8px; border:1px dashed #fab1a0; display:flex; align-items:center; gap:5px;"><i class="ri-information-line"></i> ${p.antiGaspiReason}</div>` : '';
 
+        let priceHtml = `<span>${window.formatPrice(p.price)}</span><small style="font-weight:400; color:#888; font-size:0.8rem;">/ ${p.unit}</small>`;
+        let actionHtml = `<button class="btn-primary" onclick="window.addToCart('${p.id}', event)" style="width:100%; margin-top:1rem; border-radius:12px; display:flex; justify-content:center; align-items:center; gap:8px;">
+                    <i class="ri-shopping-cart-2-line"></i> Ajouter
+                </button>`;
+
+        if (p.category === 'juice' && p.price50cl && p.price1L) {
+            const juiceId = `juice-${p.id}`;
+            priceHtml = `<span id="price-display-${p.id}">${window.formatPrice(p.price50cl)}</span>`;
+            actionHtml = `
+                <div class="juice-format-selector" style="display:flex; gap:10px; margin-top:1rem;">
+                    <button class="format-btn active" onclick="window.selectJuiceFormat('${p.id}', '50cl', ${p.price50cl}, this)">50 cl</button>
+                    <button class="format-btn" onclick="window.selectJuiceFormat('${p.id}', '1L', ${p.price1L}, this)">1 L</button>
+                </div>
+                <button class="btn-primary" onclick="window.addJuiceToCart('${p.id}', event)" style="width:100%; margin-top:1rem; border-radius:12px; display:flex; justify-content:center; align-items:center; gap:8px;">
+                    <i class="ri-shopping-cart-2-line"></i> Ajouter au panier
+                </button>
+            `;
+        }
+
         div.innerHTML = `
             ${badge}
             <div class="product-image">
@@ -313,13 +390,10 @@ window.renderProducts = (container, category = 'all', limit = null, searchTerm =
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">
                     <div class="product-price">
                         ${oldPriceHtml}
-                        <span>${window.formatPrice(p.price)}</span>
-                        <small style="font-weight:400; color:#888; font-size:0.8rem;">/ ${p.unit}</small>
+                        ${priceHtml}
                     </div>
                 </div>
-                <button class="btn-primary" onclick="window.addToCart('${p.id}', event)" style="width:100%; margin-top:1rem; border-radius:12px; display:flex; justify-content:center; align-items:center; gap:8px;">
-                    <i class="ri-shopping-cart-2-line"></i> Ajouter
-                </button>
+                ${actionHtml}
             </div>
         `;
         container.appendChild(div);
@@ -387,6 +461,35 @@ window.renderAntiGaspi = function (container) {
         `;
         container.appendChild(div);
     });
+};
+
+window.renderSubscriptions = function (container) {
+    if (!container) return;
+    container.innerHTML = window.subscriptions.map((s, idx) => `
+        <div class="pricing-card ${idx === 1 ? 'featured' : ''}" data-aos="fade-up" data-aos-delay="${idx * 100}">
+            <h3>${s.title}</h3>
+            <p>${s.subtitle}</p>
+            <div class="price">${window.formatPrice(s.price).replace(' FCFA', '')}<span>${s.unit || '/semaine'}</span></div>
+            <ul>
+                ${(s.features || []).map(f => `<li><i class="ri-check-line"></i> ${f}</li>`).join('')}
+            </ul>
+            <a href="https://wa.me/22677973958?text=${encodeURIComponent(s.waText || `Je souhaite m'abonner au ${s.title}`)}" 
+               class="${idx === 1 ? 'btn-primary' : 'btn-secondary'}" style="width: 100%;">${idx === 2 ? 'Contactez-nous' : "S'abonner"}</a>
+        </div>
+    `).join('');
+};
+
+window.renderDeliveryInfo = function (container) {
+    if (!container) return;
+    container.innerHTML = window.deliveryInfo.map((d, idx) => `
+        <div class="relay-card" data-aos="fade-up" data-aos-delay="${idx * 100}">
+            <i class="${d.icon || 'ri-truck-line'}"></i>
+            <div>
+                <h4>${d.title}</h4>
+                <p>${d.desc}</p>
+            </div>
+        </div>
+    `).join('');
 };
 
 window.renderBlog = function (container, limit = null) {
@@ -531,6 +634,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (document.getElementById('blog-post-content')) {
             window.renderBlogPost();
         }
+
+        // Subscriptions & Delivery
+        const subCont = document.getElementById('subscriptions-container');
+        if (subCont) window.renderSubscriptions(subCont);
+
+        const delCont = document.getElementById('delivery-info-container');
+        if (delCont) window.renderDeliveryInfo(delCont);
     }, 400);
 
     // 5. Setup Listeners

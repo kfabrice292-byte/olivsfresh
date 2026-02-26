@@ -82,6 +82,26 @@ window.firebaseService = {
         console.log("📝 Mise à jour article:", id);
         const { id: _, ...data } = post;
         return await db.collection("blog").doc(id).set(data, { merge: true });
+    },
+
+    // Subscriptions
+    async getSubscriptions() {
+        const snapshot = await db.collection("subscriptions").get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    },
+    async updateSubscription(id, sub) {
+        const { id: _, ...data } = sub;
+        return await db.collection("subscriptions").doc(id).set(data, { merge: true });
+    },
+
+    // Relay Points & Delivery
+    async getDeliveryInfo() {
+        const snapshot = await db.collection("delivery_info").get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    },
+    async updateDeliveryInfo(id, info) {
+        const { id: _, ...data } = info;
+        return await db.collection("delivery_info").doc(id).set(data, { merge: true });
     }
 };
 

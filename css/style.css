@@ -732,6 +732,34 @@ img {
     color: var(--primary-color);
 }
 
+.juice-format-selector {
+    display: flex;
+    gap: 10px;
+}
+
+.format-btn {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.format-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.format-btn:hover:not(.active) {
+    background: #f8fafc;
+    border-color: var(--primary-color);
+}
+
 .add-to-cart-btn {
     position: absolute;
     bottom: 1.5rem;
