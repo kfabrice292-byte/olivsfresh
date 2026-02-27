@@ -106,6 +106,10 @@ window.firebaseService = {
     async updateDeliveryInfo(id, info) {
         const { id: _, ...data } = info;
         return await db.collection("delivery_info").doc(id).set(data, { merge: true });
+    },
+    async deleteDeliveryInfo(id) {
+        console.log("🗑️ Suppression point livraison:", id);
+        return await db.collection("delivery_info").doc(id).delete();
     }
 };
 
