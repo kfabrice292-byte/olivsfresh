@@ -93,6 +93,10 @@ window.firebaseService = {
         const { id: _, ...data } = sub;
         return await db.collection("subscriptions").doc(id).set(data, { merge: true });
     },
+    async deleteSubscription(id) {
+        console.log("🗑️ Suppression abonnement:", id);
+        return await db.collection("subscriptions").doc(id).delete();
+    },
 
     // Relay Points & Delivery
     async getDeliveryInfo() {

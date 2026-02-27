@@ -84,16 +84,21 @@ async function renderAdminTables() {
     const dBody = document.getElementById('delivery-table-body');
 
     if (sBody) {
-        sBody.innerHTML = window.subscriptions.map(s => `
-            <tr>
-                <td><b>${s.title}</b></td>
-                <td>${s.subtitle}</td>
-                <td>${window.formatPrice(s.price)}${s.unit}</td>
-                <td>
-                    <button class="action-btn edit-btn" onclick="openSubEdit('${s.id}')"><i class="ri-edit-line"></i></button>
-                </td>
-            </tr>
-        `).join('');
+        if (window.subscriptions.length === 0) {
+            sBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem;">Aucune formule. Cliquez sur "Ajouter" pour en créer une.</td></tr>';
+        } else {
+            sBody.innerHTML = window.subscriptions.map(s => `
+                <tr>
+                    <td><b>${s.title}</b></td>
+                    <td>${s.subtitle}</td>
+                    <td>${window.formatPrice(s.price)}${s.unit}</td>
+                    <td>
+                        <button class="action-btn edit-btn" onclick="openSubEdit('${s.id}')"><i class="ri-edit-line"></i></button>
+                        <button class="action-btn delete-btn" onclick="deleteSubscription('${s.id}')"><i class="ri-delete-bin-line"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
     }
 
     if (dBody) {
@@ -438,6 +443,7 @@ window.openBlogEdit = function (id) {
     document.getElementById('b-title').value = b.title;
     document.getElementById('b-tag').value = b.tag;
     document.getElementById('b-desc').value = b.desc;
+    document.getElementById('b-content').value = b.content || '';
     document.getElementById('b-image').value = b.image;
     document.getElementById('blog-modal').classList.add('active');
 };
@@ -589,6 +595,7 @@ function resetBlogForm() {
     document.getElementById('b-title').value = '';
     document.getElementById('b-tag').value = '';
     document.getElementById('b-desc').value = '';
+    document.getElementById('b-content').value = '';
     document.getElementById('b-image').value = '';
     document.getElementById('b-file').value = '';
 }
@@ -597,6 +604,7 @@ window.saveBlogPost = async function () {
     const title = document.getElementById('b-title').value;
     const tag = document.getElementById('b-tag').value;
     const desc = document.getElementById('b-desc').value;
+    const content = document.getElementById('b-content').value;
     const id = document.getElementById('b-id').value;
     const url = document.getElementById('b-image').value;
     const file = document.getElementById('b-file').files[0];
@@ -618,7 +626,9 @@ window.saveBlogPost = async function () {
         }
 
         const postObj = {
-            title, tag, desc, image: img,
+            title, tag, desc,
+            content: content || desc,
+            image: img,
             date: new Date().toLocaleDateString('fr-FR'),
             updatedAt: new Date().toISOString()
         };
@@ -750,6 +760,28 @@ window.openSubEdit = function (id) {
     document.getElementById('sub-unit').value = s.unit || '/semaine';
     document.getElementById('sub-features').value = (s.features || []).join('\n');
     document.getElementById('sub-wa-text').value = s.waText || "";
+    document.getElementById('sub-modal-title').textContent = 'Modifier l\'Abonnement';
+    document.getElementById('sub-modal').classList.add('active');
+};
+
+window.deleteSubscription = async function (id) {
+    if (!confirm("Supprimer cette formule d'abonnement ?")) return;
+    try {
+        await window.firebaseService.deleteSubscription(id);
+        if (window.showToast) window.showToast("✅ Abonnement supprimé !");
+        await renderAdminTables();
+    } catch (e) { alert(e.message); }
+};
+
+window.openAddSubModal = function () {
+    document.getElementById('sub-id').value = '';
+    document.getElementById('sub-title').value = '';
+    document.getElementById('sub-subtitle').value = '';
+    document.getElementById('sub-price').value = '';
+    document.getElementById('sub-unit').value = '/semaine';
+    document.getElementById('sub-features').value = '';
+    document.getElementById('sub-wa-text').value = '';
+    document.getElementById('sub-modal-title').textContent = 'Ajouter un Abonnement';
     document.getElementById('sub-modal').classList.add('active');
 };
 
@@ -765,10 +797,18 @@ window.saveSubscription = async function () {
     if (!title || isNaN(price)) return alert("Titre et Prix requis");
 
     try {
-        await window.firebaseService.updateSubscription(id, { title, subtitle, price, unit, features, waText });
-        if (window.showToast) window.showToast("✅ Abonnement mis à jour !");
+        if (id) {
+            // Update existing subscription
+            await window.firebaseService.updateSubscription(id, { id, title, subtitle, price, unit, features, waText });
+            if (window.showToast) window.showToast("✅ Abonnement mis à jour !");
+        } else {
+            // Add new subscription
+            const newId = 'sub_' + Date.now();
+            await window.firebaseService.updateSubscription(newId, { id: newId, title, subtitle, price, unit, features, waText });
+            if (window.showToast) window.showToast("✅ Abonnement ajouté !");
+        }
         closeModals();
-        renderAdminTables();
+        await renderAdminTables();
     } catch (e) { alert(e.message); }
 };
 

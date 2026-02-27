@@ -659,6 +659,9 @@
                 <div class="card">
                     <div class="table-header">
                         <h3 style="font-weight: 700; color: var(--primary-dark);">Formules d'Abonnement</h3>
+                        <button class="btn-pro btn-primary-pro" onclick="openAddSubModal()">
+                            <i class="ri-add-circle-line"></i> Ajouter une Formule
+                        </button>
                     </div>
                     <table class="data-table">
                         <thead>
@@ -851,7 +854,7 @@
 
     <!-- Blog Modal -->
     <div id="blog-modal" class="admin-modal">
-        <div class="modal-body">
+        <div class="modal-body" style="max-width: 700px; width: 100%;">
             <h3>Ajouter/Modifier Article</h3>
             <input type="hidden" id="b-id">
             <div class="input-group">
@@ -870,8 +873,13 @@
                 </select>
             </div>
             <div class="input-group">
-                <label>Description Courte</label>
+                <label>Description Courte (résumé affiché sur les cartes)</label>
                 <textarea id="b-desc" rows="3"></textarea>
+            </div>
+            <div class="input-group">
+                <label>Contenu Complet de l'Article (HTML autorisé)</label>
+                <textarea id="b-content" rows="8"
+                    placeholder="Écrivez le contenu complet de l'article ici..."></textarea>
             </div>
             <div class="input-group">
                 <label>URL Image (ou choisir un fichier)</label>
@@ -887,7 +895,7 @@
     <!-- Subscription Modal -->
     <div id="sub-modal" class="admin-modal">
         <div class="modal-body">
-            <h3>Modifier l'Abonnement</h3>
+            <h3 id="sub-modal-title">Modifier l'Abonnement</h3>
             <input type="hidden" id="sub-id">
             <div class="input-group">
                 <label>Titre</label>
