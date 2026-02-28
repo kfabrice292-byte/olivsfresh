@@ -105,18 +105,30 @@ async function renderAdminTables() {
         if (window.deliveryInfo.length === 0) {
             dBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem;">Aucun point de livraison. Cliquez sur "Ajouter" pour en créer un.</td></tr>';
         } else {
-            dBody.innerHTML = window.deliveryInfo.map(function(d) {
-                var badgeClass = d.type === 'relay' ? 'badge-active' : '';
-                var badgeBg = d.type === 'home' ? 'background:#eff6ff; color:#1d4ed8;' : '';
-                var badgeLabel = d.type === 'relay' ? 'Relais' : 'Domicile';
-                return '<tr><td><span class="badge-status ' + badgeClass + '" style="' + badgeBg + '">' + badgeLabel + '</span></td>'
-                    + '<td><b>' + d.title + '</b></td>'
-                    + '<td>' + d.desc + '</td>'
-                    + '<td>'
-                    + '<button class="action-btn edit-btn" onclick="openDelEdit(\'' + d.id + '\')">' + '<i class="ri-edit-line"></i></button> '
-                    + '<button class="action-btn delete-btn" onclick="deleteDeliveryPoint(\'' + d.id + '\')">' + '<i class="ri-delete-bin-line"></i></button>'
-                    + '</td></tr>';
-            }).join('');
+            dBody.innerHTML = window.deliveryInfo.map(function (d) {
+
+                var badgeClass = d.type === 'relay' ? 'badge-active' : '';
+
+                var badgeBg = d.type === 'home' ? 'background:#eff6ff; color:#1d4ed8;' : '';
+
+                var badgeLabel = d.type === 'relay' ? 'Relais' : 'Domicile';
+
+                return '<tr><td><span class="badge-status ' + badgeClass + '" style="' + badgeBg + '">' + badgeLabel + '</span></td>'
+
+                    + '<td><b>' + d.title + '</b></td>'
+
+                    + '<td>' + d.desc + '</td>'
+
+                    + '<td>'
+
+                    + '<button class="action-btn edit-btn" onclick="openDelEdit(\'' + d.id + '\')">' + '<i class="ri-edit-line"></i></button> '
+
+                    + '<button class="action-btn delete-btn" onclick="deleteDeliveryPoint(\'' + d.id + '\')">' + '<i class="ri-delete-bin-line"></i></button>'
+
+                    + '</td></tr>';
+
+            }).join('');
+
         }
     }
 
@@ -130,7 +142,7 @@ async function renderAdminTables() {
             bBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem;">Aucun article.</td></tr>';
         } else {
             bBody.innerHTML = window.blogPosts.map(b => `
-                < tr >
+                <tr>
                     <td><img src="${b.image || 'img/oli_logo.png'}" style="width:40px; height:40px; border-radius:10px; object-fit:cover;" onerror="this.src='img/oli_logo.png'"></td>
                     <td style="font-weight:600;">${b.title}</td>
                     <td><span style="background:#f1f5f9; padding:4px 10px; border-radius:6px; font-size:0.8rem;">${b.tag}</span></td>
@@ -138,7 +150,7 @@ async function renderAdminTables() {
                         <button class="action-btn edit-btn" onclick="openBlogEdit('${b.id}')"><i class="ri-edit-line"></i></button>
                         <button class="action-btn delete-btn" onclick="deleteBlogPost('${b.id}')"><i class="ri-delete-bin-line"></i></button>
                     </td>
-                </tr >
+                </tr>
                 `).join('');
         }
     }
@@ -154,16 +166,16 @@ function renderProductRows(list) {
     }
 
     pBody.innerHTML = list.map(p => {
-        let priceDisplay = `< span > ${ window.formatPrice(p.price) }</span > `;
+        let priceDisplay = `<span>${window.formatPrice(p.price)}</span>`;
         if (p.category === 'juice' && p.price50cl && p.price1L) {
-            priceDisplay = `< div style = "font-size:0.8rem; line-height:1.2;" >
+            priceDisplay = `<div style="font-size:0.8rem; line-height:1.2;">
                 <div>50cl: <b>${window.formatPrice(p.price50cl)}</b></div>
                 <div>1L: <b>${window.formatPrice(p.price1L)}</b></div>
-            </div > `;
+            </div>`;
         }
 
         return `
-                < tr >
+                <tr>
             <td><input type="checkbox" class="promo-select" value="${p.id}"></td>
             <td><img src="${p.image || 'img/oli_logo.png'}" style="width:50px; height:50px; border-radius:12px; object-fit:cover; border:1px solid #eee;" onerror="this.src='img/oli_logo.png'"></td>
             <td>
@@ -265,7 +277,7 @@ window.openWhatsAppModal = function () {
         'subscription': '📦'
     };
 
-    let message = `* ${ intro.toUpperCase() }* 🌿✨\n\n`;
+    let message = `* ${intro.toUpperCase()}* 🌿✨\n\n`;
 
     // Group by category
     const grouped = {};
@@ -278,9 +290,9 @@ window.openWhatsAppModal = function () {
         const emoji = categoryEmojis[cat] || '📍';
         const catName = window.getProductTag ? window.getProductTag(cat) : cat;
 
-        message += `${ emoji } * ${ catName.toUpperCase() }*\n`;
+        message += `${emoji} * ${catName.toUpperCase()}*\n`;
         items.forEach(p => {
-            message += `• ${ p.name } : * ${ p.price } F */${p.unit}\n`;
+            message += `• ${p.name} : * ${p.price} F */${p.unit}\n`;
         });
         message += `\n`;
     }
