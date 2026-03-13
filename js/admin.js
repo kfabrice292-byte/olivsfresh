@@ -1,4 +1,4 @@
-﻿// --- AUTH LOGIC ---
+// --- AUTH LOGIC ---
 const loginBtn = document.getElementById('login-btn');
 const emailInp = document.getElementById('admin-email');
 const passInp = document.getElementById('admin-password');
@@ -463,7 +463,92 @@ window.openBlogEdit = function (id) {
     document.getElementById('b-desc').value = b.desc;
     document.getElementById('b-content').value = b.content || '';
     document.getElementById('b-image').value = b.image;
+    
+    // Set date display
+    const dateEl = document.getElementById('b-date-display');
+    if (dateEl) dateEl.value = b.date || "Inconnue";
+
     document.getElementById('blog-modal').classList.add('active');
+    updateBlogPreview();
+};
+
+// --- BLOG ENHANCEMENTS ---
+window.updateBlogPreview = function() {
+    const title = document.getElementById('b-title').value || "Titre de l'article";
+    const tag = document.getElementById('b-tag').value;
+    const desc = document.getElementById('b-desc').value || "Résumé de l'article...";
+    const content = document.getElementById('b-content').value || "Contenu de l'article...";
+    const image = document.getElementById('b-image').value || 'img/oli_logo.png';
+    const date = document.getElementById('b-date-display').value === "Aujourd'hui" ? 
+                 new Date().toLocaleDateString('fr-FR') : 
+                 document.getElementById('b-date-display').value;
+
+    const previewContainer = document.getElementById('blog-live-preview');
+    if (!previewContainer) return;
+
+    previewContainer.innerHTML = `
+        <div class="preview-header" style="height: 180px; background: url('${image}') center/cover no-repeat; position: relative;">
+            <div style="position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,0.6) 0%, transparent 100%);"></div>
+            <span style="position: absolute; top: 15px; left: 15px; background: var(--accent); color: var(--primary-dark); padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800;">
+                ${tag.toUpperCase()}
+            </span>
+        </div>
+        <div style="padding: 1.5rem;">
+            <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem;"><i class="ri-calendar-line"></i> ${date}</p>
+            <h2 style="font-size: 1.4rem; color: var(--primary-dark); margin-bottom: 0.8rem; line-height: 1.2;">${title}</h2>
+            <p style="font-size: 0.9rem; color: #64748b; border-left: 3px solid #e2e8f0; padding-left: 10px; margin-bottom: 1.5rem; font-style: italic;">${desc}</p>
+            <div class="blog-preview-content" style="font-size: 0.95rem; line-height: 1.6; color: #334155;">
+                ${content.replace(/\n/g, '<br>')}
+            </div>
+        </div>
+    `;
+};
+
+window.insertTag = function(tag) {
+    const textarea = document.getElementById('b-content');
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selected = text.substring(start, end);
+    
+    let replacement = "";
+    if (tag === 'br') replacement = "<br>";
+    else if (tag === 'ul') replacement = "<ul>\n  <li>Élément 1</li>\n  <li>Élément 2</li>\n</ul>";
+    else replacement = `<${tag}>${selected || "Texte"}</${tag}>`;
+    
+    textarea.value = text.substring(0, start) + replacement + text.substring(end);
+    textarea.focus();
+    updateBlogPreview();
+};
+
+window.handleBlogFileSelect = async function(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const statusEl = document.getElementById('b-upload-status');
+    const imageInp = document.getElementById('b-image');
+    
+    if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Téléchargement vers ImgBB...';
+        statusEl.style.color = 'var(--primary)';
+    }
+
+    try {
+        const url = await uploadToImgBB(file);
+        imageInp.value = url;
+        if (statusEl) {
+            statusEl.innerHTML = '<i class="ri-checkbox-circle-line"></i> Image prête !';
+            statusEl.style.color = 'var(--success)';
+        }
+        updateBlogPreview();
+    } catch (e) {
+        if (statusEl) {
+            statusEl.innerHTML = '<i class="ri-error-warning-line"></i> Échec du chargement.';
+            statusEl.style.color = 'var(--danger)';
+        }
+        alert(e.message);
+    }
 };
 
 function closeModals() {
@@ -611,50 +696,64 @@ window.saveProduct = async function () {
 function resetBlogForm() {
     document.getElementById('b-id').value = '';
     document.getElementById('b-title').value = '';
-    document.getElementById('b-tag').value = '';
+    document.getElementById('b-tag').value = 'Santé';
     document.getElementById('b-desc').value = '';
     document.getElementById('b-content').value = '';
     document.getElementById('b-image').value = '';
     document.getElementById('b-file').value = '';
+    document.getElementById('b-date-display').value = "Aujourd'hui";
+    
+    const statusEl = document.getElementById('b-upload-status');
+    if (statusEl) statusEl.style.display = 'none';
+    
+    updateBlogPreview();
 }
 
 window.saveBlogPost = async function () {
-    const title = document.getElementById('b-title').value;
+    const titleInp = document.getElementById('b-title');
+    const title = titleInp.value;
     const tag = document.getElementById('b-tag').value;
     const desc = document.getElementById('b-desc').value;
     const content = document.getElementById('b-content').value;
     const id = document.getElementById('b-id').value;
     const url = document.getElementById('b-image').value;
     const file = document.getElementById('b-file').files[0];
+    const dateValue = document.getElementById('b-date-display').value;
 
-    if (!title) return alert("Titre requis");
+    if (!title) {
+        titleInp.focus();
+        return alert("Veuillez donner un titre à votre article !");
+    }
 
     const btn = document.querySelector('#blog-modal .btn-admin:not([style*="background"])');
-    const originalText = btn ? btn.textContent : "Enregistrer";
+    const originalText = btn ? btn.innerHTML : "Publier l'article";
 
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Envoi...';
+        btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Finalisation...';
     }
 
     try {
         let img = url || 'img/oli_logo.png';
-        if (file) {
-            img = await uploadToImgBB(file);
+        
+        // If file is selected but not yet uploaded (though handleBlogFileSelect should have done it)
+        if (file && !url.startsWith('http')) {
+             btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Envoi image...';
+             img = await uploadToImgBB(file);
         }
 
         const postObj = {
             title, tag, desc,
             content: content || desc,
             image: img,
-            date: new Date().toLocaleDateString('fr-FR'),
+            date: dateValue === "Aujourd'hui" ? new Date().toLocaleDateString('fr-FR') : dateValue,
             updatedAt: new Date().toISOString()
         };
 
         if (id) await window.dataService.updateBlogPost(id, postObj);
         else await window.dataService.addBlogPost(postObj);
 
-        if (window.showToast) window.showToast("✅ Article enregistré !");
+        if (window.showToast) window.showToast("🚀 Article publié avec succès !");
         closeModals();
         await renderAdminTables();
     } catch (e) {
@@ -663,7 +762,7 @@ window.saveBlogPost = async function () {
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.textContent = originalText;
+            btn.innerHTML = originalText;
         }
     }
 };

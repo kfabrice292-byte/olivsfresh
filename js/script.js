@@ -527,30 +527,68 @@ window.renderBlogPost = function () {
     const post = window.blogPosts.find(p => p.id === id);
 
     if (!post) {
-        container.innerHTML = '<div style="text-align:center; padding: 5rem 0;"><h2>Article non trouvé 😕</h2><a href="blog.html" class="btn-primary" style="margin-top:1rem;">Retour au blog</a></div>';
+        container.innerHTML = '<div style="text-align:center; padding: 5rem 0;" data-aos="fade-up"><h2>Article non trouvé 😕</h2><p style="margin: 1rem 0 2rem; color: #666;">Il semble que cet article n\'existe plus ou a été déplacé.</p><a href="blog.html" class="btn-primary">Retour au blog</a></div>';
         return;
     }
 
+    // Set page title for SEO
+    document.title = `${post.title} | Blog Oliv's Fresh`;
+
     container.innerHTML = `
-        <div style="max-width: 800px; margin: 0 auto;">
-            <a href="blog.html" style="display:inline-flex; align-items:center; color:#666; margin-bottom:1rem;"><i class="ri-arrow-left-line"></i> Retour aux articles</a>
-            <div class="blog-header" style="text-align:center; margin-bottom:3rem;">
-                <span class="blog-tag" style="margin-bottom:1rem; display:inline-block;">${post.tag}</span>
-                <h1 style="font-size:2.5rem; margin-bottom:1rem;">${post.title}</h1>
-                <p style="color:#888;"><i class="ri-calendar-line"></i> ${post.date}</p>
+        <article class="blog-article-premium" style="max-width: 900px; margin: 0 auto;">
+            <header class="article-header" data-aos="fade-up" style="text-align:center; margin-bottom:4rem;">
+                <div style="margin-bottom: 1.5rem;">
+                    <a href="blog.html" class="back-link" style="display:inline-flex; align-items:center; gap:8px; color:var(--primary); font-weight:600; font-size:0.9rem; text-decoration:none; background:rgba(45, 106, 79, 0.05); padding:8px 16px; border-radius:50px; transition:0.3s;">
+                        <i class="ri-arrow-left-s-line"></i> Retour au blog
+                    </a>
+                </div>
+                <span class="blog-tag" style="margin-bottom:1.5rem; display:inline-block; background:var(--accent); color:var(--primary-dark); font-weight:800; padding:6px 16px; border-radius:50px; font-size:0.8rem; letter-spacing:1px;">
+                    ${post.tag.toUpperCase()}
+                </span>
+                <h1 style="font-size:clamp(2rem, 5vw, 3.5rem); line-height:1.2; font-family:'Playfair Display', serif; color:var(--primary-dark); margin-bottom:1.5rem; font-weight:700;">
+                    ${post.title}
+                </h1>
+                <div style="display:flex; align-items:center; justify-content:center; gap:20px; color:#64748b; font-size:0.95rem; font-weight:500;">
+                    <span><i class="ri-calendar-todo-line" style="color:var(--primary);"></i> ${post.date}</span>
+                    <span><i class="ri-map-pin-user-line" style="color:var(--primary);"></i> Oliv's Fresh Team</span>
+                </div>
+            </header>
+
+            <div class="article-hero-image" data-aos="fade-up" data-aos-delay="100" 
+                 style="width:100%; height:500px; background: url('${post.image}') center/cover no-repeat; border-radius:32px; margin-bottom:4rem; box-shadow:0 30px 60px rgba(0,0,0,0.12); border: 8px solid white;">
             </div>
-            <div style="width:100%; height:400px; background-image:url('${post.image}'); background-size:cover; background-position:center; border-radius:24px; margin-bottom:3rem; box-shadow:0 10px 30px rgba(0,0,0,0.1);"></div>
-            <div class="blog-body" style="font-size:1.1rem; line-height:1.8; color:#333;">
-                ${post.content}
-            </div>
-            <div style="margin-top:4rem; text-align:center; padding-top:3rem; border-top:1px solid #eee;">
-                <h3>Cet article vous a plu ?</h3>
-                <div style="margin-top:1.5rem;">
-                    <a href="boutique.html" class="btn-primary">Découvrir nos produits frais</a>
+
+            <div class="article-content-wrapper" data-aos="fade-up" data-aos-delay="200"
+                 style="background: white; padding: 3rem; border-radius: 32px; box-shadow: 0 10px 40px rgba(0,0,0,0.03);">
+                
+                <div class="article-intro" style="font-size: 1.35rem; line-height: 1.6; color: var(--primary-dark); font-weight: 500; margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid #f1f5f9; font-style: italic;">
+                    ${post.desc}
+                </div>
+
+                <div class="blog-body-text" style="font-size:1.15rem; line-height:1.9; color:#334155; font-family:'Outfit', sans-serif;">
+                    ${post.content.replace(/\n/g, '<br>')}
                 </div>
             </div>
-        </div>
+
+            <div class="article-footer" data-aos="fade-up" style="margin-top:5rem; text-align:center; padding:4rem; background:linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%); border-radius:32px; color:white;">
+                <h3 style="font-size:2rem; margin-bottom:1rem; font-family:'Playfair Display', serif;">Cet article vous a inspiré ?</h3>
+                <p style="opacity:0.9; margin-bottom:2.5rem; font-size:1.1rem; max-width:600px; margin-left:auto; margin-right:auto;">
+                    Profitez de la fraîcheur de nos produits bio livrés directement chez vous à Ouagadougou.
+                </p>
+                <div style="display:flex; justify-content:center; gap:15px; flex-wrap:wrap;">
+                    <a href="boutique.html" class="btn-primary" style="background:var(--accent); color:var(--primary-dark);">🚗 Voir la Boutique</a>
+                    <a href="index.html#abonnements" class="btn-secondary" style="background:rgba(255,255,255,0.1); color:white; border-color:white;">📦 S'abonner à un panier</a>
+                </div>
+            </div>
+            
+            <div style="margin-top:3rem; text-align:center;">
+                <a href="blog.html" style="color:#64748b; font-weight:600; text-decoration:none;"><i class="ri-arrow-left-line"></i> Voir tous les articles</a>
+            </div>
+        </article>
     `;
+    
+    // Refresh AOS
+    if (typeof AOS !== 'undefined') AOS.refresh();
 };
 
 // --- INITIALIZATION ---

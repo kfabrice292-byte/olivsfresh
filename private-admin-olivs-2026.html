@@ -493,6 +493,53 @@
             color: #c62828;
             border-color: #ffcdd2;
         }
+
+        /* PREMIUM BLOG EDITOR STYLES */
+        .editor-toolbar button:hover {
+            background: var(--primary) !important;
+            color: white !important;
+            border-color: var(--primary) !important;
+        }
+
+        .blog-preview-container {
+            font-family: 'Outfit', sans-serif;
+            border: 1px solid #eee;
+            background: #fff;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+
+        .blog-preview-content blockquote {
+            border-left: 4px solid var(--primary);
+            padding-left: 15px;
+            font-style: italic;
+            color: #64748b;
+            margin: 1.5rem 0;
+        }
+
+        .blog-preview-content h3 {
+            color: var(--primary-dark);
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .blog-preview-content ul {
+            padding-left: 20px;
+            margin: 1rem 0;
+        }
+
+        .blog-preview-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        #b-upload-status {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 
@@ -857,41 +904,100 @@
 
     <!-- Blog Modal -->
     <div id="blog-modal" class="admin-modal">
-        <div class="modal-body" style="max-width: 700px; width: 100%;">
-            <h3>Ajouter/Modifier Article</h3>
-            <input type="hidden" id="b-id">
-            <div class="input-group">
-                <label>Titre</label>
-                <input type="text" id="b-title">
+        <div class="modal-body" style="max-width: 1100px; width: 95%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h3 style="margin: 0;">🚀 Publication d'Article Premium</h3>
+                <button class="action-btn" onclick="closeModals()" style="background: #f1f5f9; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                    <i class="ri-close-line" style="font-size: 1.5rem;"></i>
+                </button>
             </div>
-            <div class="input-group">
-                <label>Tag</label>
-                <select id="b-tag">
-                    <option value="Santé">Santé</option>
-                    <option value="Recette">Recette</option>
-                    <option value="Conseil">Conseil</option>
-                    <option value="Saison">Saison</option>
-                    <option value="Producteurs">Producteurs</option>
-                    <option value="Événement">Événement</option>
-                </select>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <!-- Editor Side -->
+                <div class="editor-side">
+                    <input type="hidden" id="b-id">
+                    <div class="input-group">
+                        <label>Titre de l'article</label>
+                        <input type="text" id="b-title" placeholder="Ex: Les bienfaits du Moringa..." oninput="updateBlogPreview()">
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="input-group">
+                            <label>Catégorie / Tag</label>
+                            <select id="b-tag" onchange="updateBlogPreview()">
+                                <option value="Santé">🌿 Santé</option>
+                                <option value="Recette">🍳 Recette</option>
+                                <option value="Conseil">💡 Conseil</option>
+                                <option value="Saison">📅 Saison</option>
+                                <option value="Producteurs">👨‍🌾 Producteurs</option>
+                                <option value="Événement">🎉 Événement</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Date de publication</label>
+                            <input type="text" id="b-date-display" disabled value="Aujourd'hui">
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Résumé / Description courte</label>
+                        <textarea id="b-desc" rows="2" placeholder="Un court texte accrocheur..." oninput="updateBlogPreview()"></textarea>
+                    </div>
+
+                    <div class="input-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label style="margin: 0;">Contenu de l'article (Styles autorisés)</label>
+                            <div class="editor-toolbar" style="display: flex; gap: 5px;">
+                                <button type="button" onclick="insertTag('b')" title="Gras" style="padding: 2px 8px; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer;"><b>B</b></button>
+                                <button type="button" onclick="insertTag('i')" title="Italique" style="padding: 2px 8px; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer;"><i>I</i></button>
+                                <button type="button" onclick="insertTag('h3')" title="Titre" style="padding: 2px 8px; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer;">H3</button>
+                                <button type="button" onclick="insertTag('p')" title="Paragraphe" style="padding: 2px 8px; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer;">P</button>
+                                <button type="button" onclick="insertTag('br')" title="Saut de ligne" style="padding: 2px 8px; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer;">⏎</button>
+                                <button type="button" onclick="insertTag('ul')" title="Liste" style="padding: 2px 8px; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer;"><i class="ri-list-unordered"></i></button>
+                            </div>
+                        </div>
+                        <textarea id="b-content" rows="12" placeholder="Racontez votre histoire..." oninput="updateBlogPreview()"></textarea>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Image de couverture</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="b-image" placeholder="URL de l'image" style="flex: 1;" oninput="updateBlogPreview()">
+                            <div style="position: relative; overflow: hidden; display: inline-block;">
+                                <button class="btn-pro" style="background: var(--primary-light); color: white; white-space: nowrap;">
+                                    <i class="ri-image-add-line"></i> Charger
+                                </button>
+                                <input type="file" id="b-file" accept="image/*" onchange="handleBlogFileSelect(this)" style="position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;">
+                            </div>
+                        </div>
+                        <p id="b-upload-status" style="font-size: 0.75rem; color: var(--primary); margin-top: 5px; display: none;"></p>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem;">
+                        <button class="btn-admin" onclick="saveBlogPost()" style="margin: 0; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                            <i class="ri-send-plane-fill"></i> Publier l'article
+                        </button>
+                        <button class="btn-admin" onclick="closeModals()" style="background: #f1f5f9; color: #475569; margin: 0;">
+                            Annuler
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Preview Side -->
+                <div class="preview-side" style="background: #f8fafc; border-radius: 18px; padding: 1.5rem; border: 1px solid #e2e8f0; overflow-y: auto;">
+                    <p style="text-transform: uppercase; font-size: 0.7rem; font-weight: 800; color: #94a3b8; letter-spacing: 1px; margin-bottom: 1rem; display: flex; align-items: center; gap: 5px;">
+                        <i class="ri-eye-line"></i> Aperçu de l'article
+                    </p>
+                    
+                    <div id="blog-live-preview" class="blog-preview-container" style="background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); overflow: hidden; min-height: 500px;">
+                        <!-- Content injected via JS -->
+                        <div style="padding: 2rem; text-align: center; color: #94a3b8; margin-top: 5rem;">
+                            <i class="ri-edit-2-line" style="font-size: 3rem; opacity: 0.3;"></i>
+                            <p>Commencez à rédiger pour voir l'aperçu...</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="input-group">
-                <label>Description Courte (résumé affiché sur les cartes)</label>
-                <textarea id="b-desc" rows="3"></textarea>
-            </div>
-            <div class="input-group">
-                <label>Contenu Complet de l'Article (HTML autorisé)</label>
-                <textarea id="b-content" rows="8"
-                    placeholder="Écrivez le contenu complet de l'article ici..."></textarea>
-            </div>
-            <div class="input-group">
-                <label>URL Image (ou choisir un fichier)</label>
-                <input type="text" id="b-image" placeholder="https://...">
-                <input type="file" id="b-file" accept="image/*" style="margin-top: 10px; font-size: 0.85rem;">
-            </div>
-            <button class="btn-admin" onclick="saveBlogPost()">Enregistrer</button>
-            <button class="btn-admin" onclick="closeModals()"
-                style="background: #999; margin-top: 10px;">Annuler</button>
         </div>
     </div>
 
