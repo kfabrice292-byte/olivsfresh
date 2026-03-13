@@ -496,7 +496,14 @@ window.renderBlog = function (container, limit = null) {
     if (!container) return;
     container.innerHTML = '';
 
-    let list = limit ? window.blogPosts.slice(0, limit) : window.blogPosts;
+    // Sort articles by date descending (most recent first)
+    let sortedBlog = [...window.blogPosts].sort((a, b) => {
+        const dateA = a.updatedAt ? new Date(a.updatedAt) : new Date(0);
+        const dateB = b.updatedAt ? new Date(b.updatedAt) : new Date(0);
+        return dateB - dateA;
+    });
+
+    let list = limit ? sortedBlog.slice(0, limit) : sortedBlog;
 
     list.forEach((b, idx) => {
         const art = document.createElement('article');
